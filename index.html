@@ -12,34 +12,34 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+<body class="bg-[#f5f5f7] text-[#1d1d1f] min-h-screen flex flex-col antialiased">
 
-  <!-- 頂部導覽列 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+  <!-- Apple 風格毛玻璃導覽列 (HIG 規範) -->
+  <header class="apple-header sticky top-0 z-30 transition-all">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       
       <!-- 標題與個案識別 -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-blue-500/20">
+        <div class="w-10 h-10 rounded-2xl bg-[#0071e3] text-white flex items-center justify-center font-black text-xl shadow-md shadow-blue-500/25">
           B
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-lg font-black text-slate-900 tracking-tight">BOS 行為觀察系統</h1>
-            <span id="editModeBadge" class="hidden text-xs px-2 py-0.5 rounded-md font-bold bg-amber-100 text-amber-800 border border-amber-300">
+            <h1 class="text-base font-black text-[#1d1d1f] tracking-tight">BOS 行為觀察系統</h1>
+            <span id="editModeBadge" class="hidden text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300">
               ✏️ 編輯模式
             </span>
           </div>
-          <p class="text-xs text-slate-600">多師協同 ｜ A-B-C 脈絡 ｜ 正向行為 ｜ Word 匯出</p>
+          <p class="text-[11px] text-[#86868b] font-medium">多師協同 ｜ A-B-C 脈絡 ｜ 正向行為 ｜ Word 匯出</p>
         </div>
       </div>
 
       <!-- 記錄老師身分與個案切換 -->
       <div class="flex flex-wrap items-center gap-2">
         <!-- 老師稱謂 (科任/導師) -->
-        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <span class="text-xs font-bold text-slate-600 px-1.5">👩‍🏫 身份:</span>
-          <select id="observerRoleSelect" class="bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
+        <div class="flex items-center bg-slate-200/70 p-1 rounded-xl border border-slate-300/60">
+          <span class="text-xs font-bold text-slate-700 px-1.5">👩‍🏫 身份:</span>
+          <select id="observerRoleSelect" class="bg-white border border-slate-300/80 text-slate-900 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-[#0071e3] touch-target-44">
             <option value="導師" selected>導師 (班導)</option>
             <option value="英文科任">英文科任</option>
             <option value="自然科任">自然科任</option>
@@ -48,35 +48,35 @@
             <option value="特教/資源班">特教/資源班老師</option>
             <option value="自訂">自訂輸入...</option>
           </select>
-          <input type="text" id="customObserverInput" placeholder="職稱" class="hidden w-20 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold ml-1">
+          <input type="text" id="customObserverInput" placeholder="職稱" class="hidden w-20 border border-slate-300 rounded-lg px-2 py-1.5 text-xs font-bold ml-1">
         </div>
 
-        <!-- 個案選擇 -->
-        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <select id="caseSelect" class="bg-white border border-slate-300 text-slate-800 text-xs font-black rounded-lg px-2.5 py-1 focus:ring-2 focus:ring-blue-500">
+        <!-- 個案選擇 (符合 44px 觸控目標) -->
+        <div class="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60">
+          <select id="caseSelect" class="bg-white border border-slate-300/80 text-slate-900 text-xs font-black rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#0071e3] touch-target-44">
             <!-- 自動注入 -->
           </select>
-          <button id="btnNewCase" type="button" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center gap-0.5" title="自動生成 3 碼英數亂碼新個案">
+          <button id="btnNewCase" type="button" class="px-3 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-lg text-xs font-extrabold transition-all shadow-xs flex items-center gap-1 active:scale-95 touch-target-44" title="自動生成 3 碼英數亂碼新個案">
             <span>✨</span><span>新個案</span>
           </button>
-          <button id="btnManageCases" type="button" class="px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-0.5" title="管理與刪除個案">
+          <button id="btnManageCases" type="button" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1 active:scale-95 touch-target-44" title="管理與刪除個案">
             <span>👥</span><span>個案管理</span>
           </button>
         </div>
       </div>
 
-      <!-- 導航分頁按鈕群 -->
-      <nav class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white" data-target="view-record">
+      <!-- 導航分頁按鈕群 (iPadOS Segmented Control 風格) -->
+      <nav class="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 shadow-2xs">
+        <button type="button" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-900 shadow-xs" data-target="view-record">
           📝 課堂速記
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all" data-target="view-analytics">
+        <button type="button" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-analytics">
           📈 統計與熱區
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all" data-target="view-history">
+        <button type="button" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-history">
           🗂 歷史紀錄
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all" data-target="view-settings">
+        <button type="button" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-settings">
           ⚙️ 雲端設定
         </button>
       </nav>

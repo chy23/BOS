@@ -422,24 +422,19 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'behavior-card relative bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl p-4 shadow-xs transition-all select-none cursor-pointer flex flex-col justify-between overflow-hidden group';
       
       card.innerHTML = `
-        <!-- 右側空白處大圖示浮水印 (GIF微動畫：眼角餘光瞬間辨識) -->
-        <div class="absolute right-3.5 bottom-12 text-6xl opacity-15 pointer-events-none select-none transition-transform group-hover:scale-110 watermark-anim ${b.animClass}">
+        <!-- 右側空白處大圖示 (GIF微動畫：生動輔助快速辨識) -->
+        <div class="absolute right-4 bottom-11 text-6xl opacity-25 pointer-events-none select-none transition-transform group-hover:scale-105 watermark-anim ${b.animClass}">
           ${b.icon}
         </div>
 
         <div>
-          <!-- 上方：代號 + 動態 GIF 徽章 + 次數 -->
+          <!-- 上方：代號 + 次數 (依使用者需求已移除重複的小圖示，保留右側空白處動態圖示) -->
           <div class="flex items-center justify-between mb-2.5 relative z-10">
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
-                ${b.code}
-              </span>
-              <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl bg-slate-100 border border-slate-200 shadow-2xs ${b.animClass}" title="${b.name}">
-                ${b.icon}
-              </span>
-            </div>
-            <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
-              <span id="countDisplay_${b.code}" class="text-3xl font-black text-slate-800 tracking-tight transition-transform">0</span>
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
+              ${b.code}
+            </span>
+            <div class="flex items-center gap-1.5 bg-slate-50/80 px-3 py-1.5 rounded-xl border border-slate-200/80">
+              <span id="countDisplay_${b.code}" class="text-3xl font-black text-slate-900 tracking-tight transition-transform tabular-numbers">0</span>
               <span class="text-xs text-slate-500 font-bold">次</span>
             </div>
           </div>
@@ -453,13 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
 
-        <!-- 下方操作區：-1 按鈕 與 快速點擊提示條 -->
+        <!-- 下方操作區：-1 按鈕 與 快速點擊提示條 (符合 Apple HIG 觸控目標) -->
         <div class="flex items-center gap-2 pt-2.5 border-t border-slate-100 relative z-10">
-          <button type="button" class="btn-minus px-3 py-2 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-extrabold rounded-xl text-xs transition-colors flex items-center gap-1 active:scale-95" data-code="${b.code}" title="扣除 1 次">
+          <button type="button" class="btn-minus px-3.5 py-2.5 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-black rounded-xl text-xs transition-all flex items-center justify-center gap-1 active:scale-90 touch-target-44" data-code="${b.code}" title="扣除 1 次">
             <span>-1</span>
           </button>
-          <div class="flex-1 py-2 px-3 bg-blue-50/80 group-hover:bg-blue-600 text-blue-700 group-hover:text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1 transition-all border border-blue-200 group-hover:border-blue-600 shadow-2xs">
-            <span>👆 點擊卡片空白處 +1</span>
+          <div class="flex-1 py-2.5 px-3 bg-blue-50/90 group-hover:bg-[#0071e3] text-[#0071e3] group-hover:text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all border border-blue-200/80 group-hover:border-[#0071e3] shadow-2xs touch-target-44">
+            <span>👆 點擊卡片空白處直接 +1</span>
           </div>
         </div>
       `;
@@ -990,11 +985,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchTab(targetId) {
     dom.navTabs.forEach(t => {
       if (t.dataset.target === targetId) {
-        t.classList.add('bg-blue-600', 'text-white');
-        t.classList.remove('text-slate-600', 'hover:bg-slate-100');
+        t.classList.add('bg-white', 'text-slate-900', 'shadow-xs', 'font-black');
+        t.classList.remove('text-slate-600', 'hover:text-slate-900');
       } else {
-        t.classList.remove('bg-blue-600', 'text-white');
-        t.classList.add('text-slate-600', 'hover:bg-slate-100');
+        t.classList.remove('bg-white', 'text-slate-900', 'shadow-xs', 'font-black');
+        t.classList.add('text-slate-600', 'hover:text-slate-900');
       }
     });
 

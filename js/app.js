@@ -187,8 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 載入設定頁中的後端程式碼預覽
     loadBackendCodeToPreview();
 
+    // 初始化進階臨床量化模式 (ClassroomBehaviorRecord Schema & 疾病鑑別映射)
+    initAdvancedMode();
+
     // 更新紀錄小紅點提示
-    if (localStorage.getItem('bos_viewed_v2_5') && dom.changelogNewDot) {
+    if (localStorage.getItem('bos_viewed_v3_0') && dom.changelogNewDot) {
       dom.changelogNewDot.classList.add('hidden');
     }
   }
@@ -1033,6 +1036,917 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (targetId === 'view-analytics') loadAnalytics();
     else if (targetId === 'view-history') renderHistoryTable();
+    else if (targetId === 'view-advanced') refreshAdvancedModeUI();
+  }
+
+  // ===================== 🔬 進階臨床量化模式 (ClassroomBehaviorRecord) =====================
+  const advState = {
+    record_id: '',
+    student_id: '',
+    timestamp: '',
+    period: 2,
+    subject: '數學',
+    activity_type: '個別書寫作答',
+    environment_notes: '',
+    antecedent_category: 'TASK_DIFFICULTY',
+    antecedent_details: '數學難題/多步驟解題卡關',
+    behavior_cat_filter: 'ALL',
+    behavior_category: 'INATTENTION',
+    behavior_target_code: 'OFF',
+    behavior_target_label: '脫離任務/發呆 (OFF)',
+    related_conditions: ['ADHD_INATTENTION', 'ANXIETY_RSD', 'SLD_READING_WRITING', 'SLD_MATH'],
+    frequency: 1,
+    duration_minutes: 5,
+    intensity: 2,
+    strategy: 'TASK_ADAPTATION',
+    strategy_label: '調整難度/切分任務步驟',
+    outcome: 'IMMEDIATE_IMPROVEMENT',
+    outcome_label: '立即改善（重回任務並持續 > 5分鐘）',
+    qualitative_notes: '',
+    stopwatchRunning: false,
+    stopwatchSeconds: 0,
+    stopwatchInterval: null
+  };
+
+  function mapScheduleIndexToPeriodInt(idx) {
+    // 將 0~8 節次索引映射至 Schema 規範之 1~8 節
+    const map = [1, 1, 2, 3, 4, 4, 5, 6, 7];
+    return map[idx] || 1;
+  }
+
+  function mapPeriodIntToScheduleIndex(periodInt) {
+    const map = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7, 7: 8, 8: 8 };
+    return map[periodInt] !== undefined ? map[periodInt] : 1;
+  }
+
+  function initAdvancedMode() {
+    if (!window.ClinicalAdvanced) return;
+
+    advState.student_id = currentCaseId || 'S105';
+    advState.record_id = window.ClinicalAdvanced.generateRecordId(currentDate);
+    advState.period = mapScheduleIndexToPeriodInt(currentPeriodIndex);
+
+    const now = new Date();
+    const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const tsInput = document.getElementById('advTimestampInput');
+    if (tsInput) tsInput.value = localIso;
+
+    renderClinicalMappingTables();
+    refreshAdvancedModeUI();
+    bindAdvancedModeEvents();
+  }
+
+  function refreshAdvancedModeUI() {
+    if (!window.ClinicalAdvanced) return;
+
+    const recIdInput = document.getElementById('advRecordIdInput');
+    const stuIdInput = document.getElementById('advStudentIdInput');
+    const envInput = document.getElementById('advEnvNotesInput');
+    const freqInput = document.getElementById('advFrequencyInput');
+    const durInput = document.getElementById('advDurationInput');
+    const qualInput = document.getElementById('advQualitativeNotesInput');
+    const studentBadge = document.getElementById('advCurrentStudentBadge');
+
+    if (recIdInput && !recIdInput.value) {
+      recIdInput.value = advState.record_id;
+    } else if (recIdInput) {
+      recIdInput.value = advState.record_id;
+    }
+    if (stuIdInput) stuIdInput.value = advState.student_id || currentCaseId;
+    if (envInput) envInput.value = advState.environment_notes;
+    if (freqInput) freqInput.value = advState.frequency;
+    if (durInput) durInput.value = advState.duration_minutes;
+    if (qualInput) qualInput.value = advState.qualitative_notes;
+    if (studentBadge) studentBadge.textContent = `學生代碼：${advState.student_id || currentCaseId}`;
+
+    renderAdvContextPills();
+    renderAdvAntecedentPills();
+    renderAdvBehaviorSection();
+    renderAdvIntensityCards();
+    renderAdvInterventionSection();
+    updateAdvJsonPreview();
+    renderAdvDashboardAndRecords();
+  }
+
+  function renderAdvContextPills() {
+    const CA = window.ClinicalAdvanced;
+    // 1~8 節次
+    const periodContainer = document.getElementById('advPeriodPills');
+    if (periodContainer) {
+      periodContainer.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(p => {
+        const active = advState.period === p;
+        return `<button type="button" data-period="${p}" class="adv-period-btn px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border cursor-pointer ${
+          active ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+        }">第 ${p} 節</button>`;
+      }).join('');
+      periodContainer.querySelectorAll('.adv-period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.period = Number(btn.dataset.period);
+          renderAdvContextPills();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    // 科目
+    const subjContainer = document.getElementById('advSubjectPills');
+    if (subjContainer) {
+      subjContainer.innerHTML = CA.SUBJECTS.map(s => {
+        const active = advState.subject === s;
+        return `<button type="button" data-subj="${s}" class="adv-subj-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+          active ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-black' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+        }">${s}</button>`;
+      }).join('');
+      subjContainer.querySelectorAll('.adv-subj-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.subject = btn.dataset.subj;
+          renderAdvContextPills();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    // 教學活動型態
+    const actContainer = document.getElementById('advActivityPills');
+    if (actContainer) {
+      actContainer.innerHTML = CA.ACTIVITY_TYPES.map(a => {
+        const active = advState.activity_type === a;
+        return `<button type="button" data-act="${a}" class="adv-act-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+          active ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs font-black' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+        }">${a}</button>`;
+      }).join('');
+      actContainer.querySelectorAll('.adv-act-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.activity_type = btn.dataset.act;
+          renderAdvContextPills();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    // 物理環境預設標籤
+    const envPresetContainer = document.getElementById('advEnvPresets');
+    if (envPresetContainer) {
+      envPresetContainer.innerHTML = CA.ENVIRONMENT_PRESETS.map(p => `
+        <button type="button" data-env="${p}" class="adv-env-preset px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 text-[11px] font-semibold border border-slate-200 transition-colors cursor-pointer">
+          + ${p}
+        </button>
+      `).join('');
+      envPresetContainer.querySelectorAll('.adv-env-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.environment_notes = btn.dataset.env;
+          const envInput = document.getElementById('advEnvNotesInput');
+          if (envInput) envInput.value = advState.environment_notes;
+          updateAdvJsonPreview();
+        });
+      });
+    }
+  }
+
+  function renderAdvAntecedentPills() {
+    const CA = window.ClinicalAdvanced;
+    const catContainer = document.getElementById('advAntecedentCatPills');
+    if (catContainer) {
+      catContainer.innerHTML = CA.ANTECEDENT_CATEGORIES.map(c => {
+        const active = advState.antecedent_category === c.code;
+        return `
+          <button type="button" data-cat="${c.code}" class="adv-ant-cat-btn p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+            active ? 'bg-amber-500 text-white border-amber-600 shadow-xs' : 'bg-slate-50 hover:bg-amber-50/50 text-slate-800 border-slate-200'
+          }">
+            <div class="font-mono text-[10px] ${active ? 'text-amber-100' : 'text-slate-500'} font-bold">${c.code}</div>
+            <div class="text-xs font-black mt-0.5">${c.name}</div>
+          </button>
+        `;
+      }).join('');
+
+      catContainer.querySelectorAll('.adv-ant-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.antecedent_category = btn.dataset.cat;
+          const catMeta = CA.getAntecedentCategory(advState.antecedent_category);
+          if (catMeta && catMeta.defaultDetails && catMeta.defaultDetails.length > 0) {
+            advState.antecedent_details = catMeta.defaultDetails[0];
+          }
+          syncAutoRelatedConditions();
+          renderAdvAntecedentPills();
+          renderAdvBehaviorSection();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    const detailContainer = document.getElementById('advAntecedentDetailPills');
+    if (detailContainer) {
+      detailContainer.innerHTML = CA.ANTECEDENT_DETAILS_ENUM.map(item => {
+        const active = advState.antecedent_details === item.detail;
+        return `
+          <button type="button" data-detail="${item.detail}" data-cat="${item.category}" class="adv-ant-det-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+            active ? 'bg-amber-600 text-white border-amber-700 font-black shadow-xs' : 'bg-white hover:bg-amber-50 text-slate-700 border-slate-300'
+          }">
+            ${item.detail}
+          </button>
+        `;
+      }).join('');
+
+      detailContainer.querySelectorAll('.adv-ant-det-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.antecedent_details = btn.dataset.detail;
+          advState.antecedent_category = btn.dataset.cat;
+          syncAutoRelatedConditions();
+          renderAdvAntecedentPills();
+          renderAdvBehaviorSection();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    // 更新誘發因子疾病機制提示
+    const mechText = document.getElementById('advAntecedentMechanismText');
+    if (mechText) {
+      const catMeta = CA.getAntecedentCategory(advState.antecedent_category);
+      mechText.innerHTML = `
+        <b>誘發分類【${catMeta.name} (${catMeta.code})】</b> ➔ 最可能關聯的疾病機制：<b class="text-rose-700 underline">${catMeta.mechanism}</b>
+        <span class="block text-[11px] text-amber-800 mt-0.5">常見觸發情境範例：${catMeta.examples}</span>
+      `;
+    }
+  }
+
+  function syncAutoRelatedConditions() {
+    const CA = window.ClinicalAdvanced;
+    const behMeta = CA.getBehaviorByCode(advState.behavior_target_code);
+    const detItem = CA.ANTECEDENT_DETAILS_ENUM.find(d => d.detail === advState.antecedent_details);
+    const set = new Set(behMeta ? behMeta.relatedConditions : []);
+    if (detItem && detItem.extraCondition) {
+      set.add(detItem.extraCondition);
+    }
+    advState.related_conditions = Array.from(set);
+  }
+
+  function renderAdvBehaviorSection() {
+    const CA = window.ClinicalAdvanced;
+
+    // 1. 向度篩選 Tabs
+    const catTabs = document.getElementById('advBehaviorCategoryTabs');
+    if (catTabs) {
+      const allTabs = [{ code: 'ALL', name: '全部向度 (17項)', icon: '📋' }, ...CA.BEHAVIOR_CATEGORIES];
+      catTabs.innerHTML = allTabs.map(c => {
+        const active = advState.behavior_cat_filter === c.code;
+        return `
+          <button type="button" data-bcat="${c.code}" class="adv-bcat-tab px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+            active ? 'bg-indigo-600 text-white border-indigo-600 font-black shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+          }">
+            <span>${c.icon}</span> <span>${c.name}</span>
+          </button>
+        `;
+      }).join('');
+
+      catTabs.querySelectorAll('.adv-bcat-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.behavior_cat_filter = btn.dataset.bcat;
+          renderAdvBehaviorSection();
+        });
+      });
+    }
+
+    // 2. 17 項具體行為代碼卡片
+    const grid = document.getElementById('advBehaviorTargetGrid');
+    if (grid) {
+      const filteredTargets = advState.behavior_cat_filter === 'ALL'
+        ? CA.BEHAVIOR_TARGETS
+        : CA.BEHAVIOR_TARGETS.filter(b => b.category === advState.behavior_cat_filter);
+
+      grid.innerHTML = filteredTargets.map(b => {
+        const active = advState.behavior_target_code === b.code;
+        return `
+          <div data-code="${b.code}" class="adv-beh-card p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+            active ? 'border-indigo-600 bg-indigo-50/70 shadow-xs' : 'border-slate-200 bg-white hover:border-indigo-300'
+          }">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-black text-xs ${active ? 'text-indigo-950' : 'text-slate-900'}">${b.label}</span>
+              <span class="px-2 py-0.5 rounded-md font-mono text-[11px] font-black ${
+                active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
+              }">${b.code}</span>
+            </div>
+            <div class="mt-1.5 text-[11px] text-slate-600 flex items-center justify-between">
+              <span class="truncate">首要指向：<b class="text-indigo-800">${b.primary}</b></span>
+              <span class="text-[10px] text-slate-400 font-mono ml-1">對應基礎: ${b.basicCodeMap}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.adv-beh-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const meta = CA.getBehaviorByCode(card.dataset.code);
+          advState.behavior_target_code = meta.code;
+          advState.behavior_target_label = meta.label;
+          advState.behavior_category = meta.category;
+          syncAutoRelatedConditions();
+          renderAdvBehaviorSection();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    // 3. 更新右側即時臨床鑑別診斷提示卡
+    const activeMeta = CA.getBehaviorByCode(advState.behavior_target_code);
+    const codeBadge = document.getElementById('advDiagCodeBadge');
+    const primaryEl = document.getElementById('advDiagPrimary');
+    const diffEl = document.getElementById('advDiagDifferential');
+    const keyEl = document.getElementById('advDiagClinicalKey');
+
+    if (codeBadge) codeBadge.textContent = `${activeMeta.code} (${activeMeta.category})`;
+    if (primaryEl) primaryEl.textContent = activeMeta.primary;
+    if (diffEl) diffEl.textContent = activeMeta.differential;
+    if (keyEl) keyEl.textContent = activeMeta.clinicalKey;
+
+    // 4. 擴充 Schema 屬性 related_conditions 標籤選擇器
+    const relContainer = document.getElementById('advRelatedConditionsPills');
+    if (relContainer) {
+      relContainer.innerHTML = Object.values(CA.RELATED_CONDITIONS_META).map(cond => {
+        const checked = advState.related_conditions.includes(cond.code);
+        return `
+          <button type="button" data-cond="${cond.code}" class="adv-rel-cond-btn px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+            checked ? cond.badgeClass + ' font-black ring-2 ring-offset-1 ring-indigo-400' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+          }">
+            ${checked ? '✓ ' : '+ '}${cond.label} (${cond.code})
+          </button>
+        `;
+      }).join('');
+
+      relContainer.querySelectorAll('.adv-rel-cond-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const c = btn.dataset.cond;
+          if (advState.related_conditions.includes(c)) {
+            advState.related_conditions = advState.related_conditions.filter(x => x !== c);
+          } else {
+            advState.related_conditions.push(c);
+          }
+          renderAdvBehaviorSection();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+  }
+
+  function renderAdvIntensityCards() {
+    const CA = window.ClinicalAdvanced;
+    const container = document.getElementById('advIntensityCards');
+    if (!container) return;
+
+    container.innerHTML = CA.INTENSITY_LEVELS.map(lv => {
+      const active = advState.intensity === lv.value;
+      return `
+        <div data-val="${lv.value}" class="adv-intensity-card p-3 rounded-xl border-2 transition-all cursor-pointer ${
+          active ? lv.colorClass + ' border-current shadow-xs ring-2 ring-offset-1 ring-blue-400' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+        }">
+          <div class="font-black text-xs">${lv.label}</div>
+          <div class="text-[11px] opacity-80 mt-1">${lv.desc}</div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.adv-intensity-card').forEach(card => {
+      card.addEventListener('click', () => {
+        advState.intensity = Number(card.dataset.val);
+        renderAdvIntensityCards();
+        updateAdvJsonPreview();
+      });
+    });
+  }
+
+  function renderAdvInterventionSection() {
+    const CA = window.ClinicalAdvanced;
+    const stratContainer = document.getElementById('advStrategyPills');
+    if (stratContainer) {
+      stratContainer.innerHTML = CA.INTERVENTION_STRATEGIES.map(s => {
+        const active = advState.strategy === s.code;
+        return `
+          <button type="button" data-code="${s.code}" data-label="${s.label}" class="adv-strat-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+            active ? 'bg-emerald-600 text-white border-emerald-700 font-black shadow-xs' : 'bg-white hover:bg-emerald-50 text-slate-700 border-slate-300'
+          }">
+            ${s.label}
+          </button>
+        `;
+      }).join('');
+
+      stratContainer.querySelectorAll('.adv-strat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.strategy = btn.dataset.code;
+          advState.strategy_label = btn.dataset.label;
+          renderAdvInterventionSection();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+
+    const outContainer = document.getElementById('advOutcomeCards');
+    if (outContainer) {
+      outContainer.innerHTML = CA.INTERVENTION_OUTCOMES.map(o => {
+        const active = advState.outcome === o.code;
+        return `
+          <button type="button" data-code="${o.code}" data-label="${o.label}" class="adv-outcome-btn p-2.5 rounded-xl text-left border-2 transition-all cursor-pointer ${
+            active ? o.badgeClass + ' font-black ring-2 ring-offset-1 ring-emerald-500' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+          }">
+            <div class="font-mono text-[10px] opacity-75">${o.code}</div>
+            <div class="text-xs font-bold mt-0.5">${o.label}</div>
+          </button>
+        `;
+      }).join('');
+
+      outContainer.querySelectorAll('.adv-outcome-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          advState.outcome = btn.dataset.code;
+          advState.outcome_label = btn.dataset.label;
+          renderAdvInterventionSection();
+          updateAdvJsonPreview();
+        });
+      });
+    }
+  }
+
+  function buildCurrentAdvRecordObject() {
+    const recIdInput = document.getElementById('advRecordIdInput');
+    const stuIdInput = document.getElementById('advStudentIdInput');
+    const tsInput = document.getElementById('advTimestampInput');
+    const envInput = document.getElementById('advEnvNotesInput');
+    const freqInput = document.getElementById('advFrequencyInput');
+    const durInput = document.getElementById('advDurationInput');
+    const qualInput = document.getElementById('advQualitativeNotesInput');
+
+    const rawTs = tsInput && tsInput.value ? tsInput.value : new Date().toISOString().slice(0, 16);
+    const isoTs = rawTs.includes('+08:00') ? rawTs : `${rawTs.length === 16 ? rawTs + ':00' : rawTs}+08:00`;
+
+    return {
+      record_id: (recIdInput && recIdInput.value.trim()) || advState.record_id,
+      student_id: (stuIdInput && stuIdInput.value.trim()) || advState.student_id || currentCaseId,
+      timestamp: isoTs,
+      context: {
+        period: Number(advState.period || 1),
+        subject: advState.subject,
+        activity_type: advState.activity_type,
+        environment_notes: envInput ? envInput.value.trim() : advState.environment_notes
+      },
+      antecedent: {
+        category: advState.antecedent_category,
+        details: advState.antecedent_details
+      },
+      behavior: {
+        category: advState.behavior_category,
+        target_code: advState.behavior_target_code,
+        target_label: advState.behavior_target_label,
+        related_conditions: [...advState.related_conditions]
+      },
+      metrics: {
+        frequency: Number(freqInput ? freqInput.value : advState.frequency),
+        duration_minutes: Number(durInput ? durInput.value : advState.duration_minutes),
+        intensity: Number(advState.intensity)
+      },
+      intervention: {
+        strategy: advState.strategy,
+        strategy_label: advState.strategy_label,
+        outcome: advState.outcome,
+        outcome_label: advState.outcome_label
+      },
+      qualitative_notes: qualInput ? qualInput.value.trim() : advState.qualitative_notes
+    };
+  }
+
+  function updateAdvJsonPreview() {
+    if (!window.ClinicalAdvanced) return;
+    const rec = buildCurrentAdvRecordObject();
+    const validation = window.ClinicalAdvanced.validateRecord(rec);
+
+    const previewBox = document.getElementById('advJsonPreviewBox');
+    const badge = document.getElementById('advSchemaValidBadge');
+
+    if (previewBox) {
+      previewBox.textContent = JSON.stringify(rec, null, 2);
+    }
+    if (badge) {
+      if (validation.valid) {
+        badge.textContent = '✓ Schema 驗證通過';
+        badge.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      } else {
+        badge.textContent = `⚠ 欄位待修正 (${validation.errors[0]})`;
+        badge.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+      }
+    }
+  }
+
+  function renderClinicalMappingTables() {
+    const CA = window.ClinicalAdvanced;
+    if (!CA) return;
+
+    const behTbody = document.getElementById('clinicalBehaviorMappingTableBody');
+    if (behTbody) {
+      behTbody.innerHTML = CA.BEHAVIOR_TARGETS.map(b => {
+        const condPills = (b.relatedConditions || []).map(c => {
+          const meta = CA.RELATED_CONDITIONS_META[c];
+          return `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border mr-1 mb-1 ${meta ? meta.badgeClass : ''}">${c}</span>`;
+        }).join('');
+        return `
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="p-2.5 font-mono font-black text-indigo-700">${b.code}</td>
+            <td class="p-2.5 font-bold text-slate-900">${b.shortName}</td>
+            <td class="p-2.5 font-black text-blue-800">${b.primary}</td>
+            <td class="p-2.5 text-slate-700">${b.differential}</td>
+            <td class="p-2.5 text-slate-600 leading-relaxed">${b.clinicalKey}</td>
+            <td class="p-2.5">${condPills}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    const antTbody = document.getElementById('clinicalAntecedentMappingTableBody');
+    if (antTbody) {
+      antTbody.innerHTML = CA.ANTECEDENT_CATEGORIES.filter(a => a.code !== 'NONE_OBSERVED').map(a => `
+        <tr class="border-b border-slate-100 hover:bg-amber-50/40">
+          <td class="p-2.5 font-mono font-black text-amber-800"><code>${a.code}</code></td>
+          <td class="p-2.5 font-bold text-slate-900">${a.name}</td>
+          <td class="p-2.5 text-slate-700">${a.examples}</td>
+          <td class="p-2.5 font-black text-rose-800">${a.mechanism}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  function renderAdvDashboardAndRecords() {
+    const CA = window.ClinicalAdvanced;
+    if (!CA) return;
+
+    const targetStudent = advState.student_id || currentCaseId;
+    let records = CA.getRecordsByFilter(targetStudent, null, 'all');
+    // 若該個案尚無進階紀錄，顯示全部進階紀錄供檢視
+    if (records.length === 0) {
+      records = CA.getAllRecords();
+    }
+
+    const analysis = CA.analyzeClinicalRecords(records);
+
+    // 1. 相關疾病標籤分佈
+    const condList = document.getElementById('advConditionsSummaryList');
+    if (condList) {
+      if (analysis.rankedConditions.length === 0) {
+        condList.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">尚無進階紀錄，請點擊上方「🧪 載入範例」或「💾 儲存進階臨床紀錄」</p>';
+      } else {
+        const maxScore = Math.max(...analysis.rankedConditions.map(c => c.weightedScore), 1);
+        condList.innerHTML = analysis.rankedConditions.map(c => {
+          const pct = Math.min(100, Math.round((c.weightedScore / maxScore) * 100));
+          return `
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-800">${c.label} <code class="text-[10px] text-slate-500">(${c.code})</code></span>
+                <span class="font-mono font-black text-slate-700">${c.count} 次 · 加權 ${c.weightedScore}</span>
+              </div>
+              <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all" style="width:${pct}%; background-color:${c.barColor}"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 2. 介入策略成效
+    const intvList = document.getElementById('advInterventionSummaryList');
+    if (intvList) {
+      if (analysis.strategyEffectiveness.length === 0) {
+        intvList.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">尚無介入處置數據</p>';
+      } else {
+        intvList.innerHTML = analysis.strategyEffectiveness.map(s => {
+          const rate = s.total > 0 ? Math.round(((s.immediate + s.transient * 0.5) / s.total) * 100) : 0;
+          return `
+            <div class="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-2 text-xs">
+              <div>
+                <div class="font-black text-slate-800">${s.label}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">
+                  立即改善: <b class="text-emerald-700">${s.immediate}</b> ｜ 短暫: <b class="text-blue-700">${s.transient}</b> ｜ 無效: ${s.noEffect} ｜ 加劇: <b class="text-rose-600">${s.escalation}</b>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg font-black ${rate >= 60 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                有效率 ${rate}%
+              </span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 3. 已存進階事件表格
+    const tableContainer = document.getElementById('advRecordsTableContainer');
+    if (tableContainer) {
+      if (records.length === 0) {
+        tableContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">目前尚無進階臨床事件紀錄。可點擊右上角「🧪 載入範例 (rec_20261111_001)」並儲存體驗！</div>';
+      } else {
+        const rows = records.map(r => {
+          const behMeta = CA.getBehaviorByCode(r.behavior?.target_code);
+          return `
+            <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
+              <td class="p-2.5 font-mono font-bold text-slate-800">
+                ${r.record_id}<br>
+                <span class="text-[11px] text-blue-600 font-black">學生：${r.student_id}</span>
+              </td>
+              <td class="p-2.5">
+                <b>第 ${r.context?.period} 節 · ${r.context?.subject}</b><br>
+                <span class="text-[11px] text-slate-500">${r.context?.activity_type}</span>
+              </td>
+              <td class="p-2.5">
+                <span class="font-mono text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">${r.antecedent?.category}</span><br>
+                <span class="text-[11px] text-slate-700">${r.antecedent?.details || ''}</span>
+              </td>
+              <td class="p-2.5">
+                <b class="text-indigo-900">${r.behavior?.target_label}</b><br>
+                <span class="text-[11px] text-rose-700 font-bold">指向：${behMeta?.primary || ''}</span>
+              </td>
+              <td class="p-2.5 text-center font-mono">
+                ${r.metrics?.frequency}次 / ${r.metrics?.duration_minutes}分<br>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  r.metrics?.intensity === 3 ? 'bg-rose-100 text-rose-800' : r.metrics?.intensity === 2 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                }">強度 ${r.metrics?.intensity}</span>
+              </td>
+              <td class="p-2.5">
+                <b>${r.intervention?.strategy_label}</b><br>
+                <span class="text-[11px] text-emerald-700 font-semibold">${r.intervention?.outcome_label}</span>
+              </td>
+              <td class="p-2.5 text-right space-x-1">
+                <button type="button" data-loadid="${r.record_id}" class="btn-adv-load px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-bold cursor-pointer">載入</button>
+                <button type="button" data-delid="${r.record_id}" class="btn-adv-del px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[11px] font-bold cursor-pointer">刪除</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tableContainer.innerHTML = `
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 text-[11px] font-black border-b border-slate-200">
+                <th class="p-2.5">紀錄編號 / 學生</th>
+                <th class="p-2.5">節次與課堂情境</th>
+                <th class="p-2.5">誘發前因 (A)</th>
+                <th class="p-2.5">外顯行為與臨床指向 (B)</th>
+                <th class="p-2.5 text-center">量化指標</th>
+                <th class="p-2.5">介入與成效 (C)</th>
+                <th class="p-2.5 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+
+        tableContainer.querySelectorAll('.btn-adv-load').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const target = CA.getAllRecords().find(x => x.record_id === btn.dataset.loadid);
+            if (target) populateAdvFormFromRecord(target);
+          });
+        });
+
+        tableContainer.querySelectorAll('.btn-adv-del').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (confirm(`確定要刪除進階紀錄【${btn.dataset.delid}】嗎？`)) {
+              CA.deleteRecord(btn.dataset.delid);
+              renderAdvDashboardAndRecords();
+              showToast('已刪除該筆進階臨床紀錄', 'info');
+            }
+          });
+        });
+      }
+    }
+  }
+
+  function populateAdvFormFromRecord(rec) {
+    advState.record_id = rec.record_id;
+    advState.student_id = rec.student_id;
+    advState.timestamp = rec.timestamp;
+    advState.period = rec.context?.period || 2;
+    advState.subject = rec.context?.subject || '數學';
+    advState.activity_type = rec.context?.activity_type || '個別書寫作答';
+    advState.environment_notes = rec.context?.environment_notes || '';
+    advState.antecedent_category = rec.antecedent?.category || 'TASK_DIFFICULTY';
+    advState.antecedent_details = rec.antecedent?.details || '數學難題/多步驟解題卡關';
+    advState.behavior_category = rec.behavior?.category || 'INATTENTION';
+    advState.behavior_target_code = rec.behavior?.target_code || 'OFF';
+    advState.behavior_target_label = rec.behavior?.target_label || '脫離任務/發呆 (OFF)';
+    advState.related_conditions = rec.behavior?.related_conditions
+      ? [...rec.behavior.related_conditions]
+      : [...(window.ClinicalAdvanced.getBehaviorByCode(advState.behavior_target_code)?.relatedConditions || [])];
+    advState.frequency = rec.metrics?.frequency ?? 1;
+    advState.duration_minutes = rec.metrics?.duration_minutes ?? 8;
+    advState.intensity = rec.metrics?.intensity ?? 2;
+    advState.strategy = rec.intervention?.strategy || 'TASK_ADAPTATION';
+    advState.strategy_label = rec.intervention?.strategy_label || '調整難度/切分任務步驟';
+    advState.outcome = rec.intervention?.outcome || 'IMMEDIATE_IMPROVEMENT';
+    advState.outcome_label = rec.intervention?.outcome_label || '立即改善（重回任務並持續 > 5分鐘）';
+    advState.qualitative_notes = rec.qualitative_notes || '';
+
+    const tsInput = document.getElementById('advTimestampInput');
+    if (tsInput && rec.timestamp) {
+      tsInput.value = rec.timestamp.slice(0, 16);
+    }
+
+    refreshAdvancedModeUI();
+  }
+
+  function bindAdvancedModeEvents() {
+    const CA = window.ClinicalAdvanced;
+    if (!CA) return;
+
+    // 雙模式切換按鈕
+    const btnToAdv = document.getElementById('btnSwitchToAdvancedMode');
+    if (btnToAdv) {
+      btnToAdv.addEventListener('click', () => {
+        advState.student_id = currentCaseId;
+        advState.period = mapScheduleIndexToPeriodInt(currentPeriodIndex);
+        switchTab('view-advanced');
+      });
+    }
+
+    const btnToBasic = document.getElementById('btnSwitchToBasicMode');
+    if (btnToBasic) {
+      btnToBasic.addEventListener('click', () => switchTab('view-record'));
+    }
+
+    // 載入標準範例 (rec_20261111_001)
+    const btnSample = document.getElementById('btnLoadSampleAdvRecord');
+    if (btnSample) {
+      btnSample.addEventListener('click', () => {
+        const sample = CA.getSampleRecord('S105');
+        populateAdvFormFromRecord(sample);
+        showToast('🧪 已載入標準範例紀錄 rec_20261111_001 (S105 數學課多步驟應用題卡關)', 'success');
+      });
+    }
+
+    // 捲動至臨床映射表
+    const btnScrollMap = document.getElementById('btnScrollToMappingTable');
+    if (btnScrollMap) {
+      btnScrollMap.addEventListener('click', () => {
+        const sec = document.getElementById('clinicalMappingReferenceSection');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+
+    // 表單輸入即時連動 JSON 預覽
+    ['advRecordIdInput', 'advStudentIdInput', 'advTimestampInput', 'advEnvNotesInput', 'advFrequencyInput', 'advDurationInput', 'advQualitativeNotesInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          if (id === 'advStudentIdInput') advState.student_id = el.value.trim();
+          if (id === 'advEnvNotesInput') advState.environment_notes = el.value;
+          if (id === 'advFrequencyInput') advState.frequency = Math.max(1, Number(el.value || 1));
+          if (id === 'advDurationInput') advState.duration_minutes = Math.max(0, Number(el.value || 0));
+          if (id === 'advQualitativeNotesInput') advState.qualitative_notes = el.value;
+          updateAdvJsonPreview();
+        });
+      }
+    });
+
+    // 頻率加減
+    const btnMinus = document.getElementById('btnAdvFreqMinus');
+    const btnPlus = document.getElementById('btnAdvFreqPlus');
+    if (btnMinus) {
+      btnMinus.addEventListener('click', () => {
+        advState.frequency = Math.max(1, Number(advState.frequency) - 1);
+        document.getElementById('advFrequencyInput').value = advState.frequency;
+        updateAdvJsonPreview();
+      });
+    }
+    if (btnPlus) {
+      btnPlus.addEventListener('click', () => {
+        advState.frequency = Number(advState.frequency) + 1;
+        document.getElementById('advFrequencyInput').value = advState.frequency;
+        updateAdvJsonPreview();
+      });
+    }
+
+    // 持續時間預設按鈕
+    document.querySelectorAll('.adv-dur-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        advState.duration_minutes = Number(btn.dataset.min);
+        document.getElementById('advDurationInput').value = advState.duration_minutes;
+        updateAdvJsonPreview();
+      });
+    });
+
+    // 課堂即時碼錶
+    const btnStopwatch = document.getElementById('btnAdvStopwatch');
+    const stopwatchLabel = document.getElementById('advStopwatchLabel');
+    if (btnStopwatch && stopwatchLabel) {
+      btnStopwatch.addEventListener('click', () => {
+        if (!advState.stopwatchRunning) {
+          advState.stopwatchRunning = true;
+          advState.stopwatchSeconds = 0;
+          btnStopwatch.className = 'px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-black transition-all flex items-center gap-1 animate-pulse';
+          advState.stopwatchInterval = setInterval(() => {
+            advState.stopwatchSeconds += 1;
+            const m = Math.floor(advState.stopwatchSeconds / 60);
+            const s = String(advState.stopwatchSeconds % 60).padStart(2, '0');
+            stopwatchLabel.textContent = `計時中 ${m}:${s} (點擊停止填入)`;
+          }, 1000);
+        } else {
+          advState.stopwatchRunning = false;
+          clearInterval(advState.stopwatchInterval);
+          const mins = Math.max(0.5, Math.round((advState.stopwatchSeconds / 60) * 10) / 10);
+          advState.duration_minutes = mins;
+          document.getElementById('advDurationInput').value = mins;
+          btnStopwatch.className = 'px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-[11px] font-black transition-all flex items-center gap-1';
+          stopwatchLabel.textContent = '啟動計時碼錶';
+          updateAdvJsonPreview();
+          showToast(`⏱️ 碼錶已停止，自動填入持續時間：${mins} 分鐘`, 'info');
+        }
+      });
+    }
+
+    // 複製 JSON
+    const btnCopyJson = document.getElementById('btnCopyAdvJson');
+    if (btnCopyJson) {
+      btnCopyJson.addEventListener('click', () => {
+        const rec = buildCurrentAdvRecordObject();
+        navigator.clipboard.writeText(JSON.stringify(rec, null, 2));
+        showToast('📋 已複製標準 ClassroomBehaviorRecord JSON！', 'success');
+      });
+    }
+
+    // 儲存進階臨床紀錄
+    const btnSaveAdv = document.getElementById('btnSaveAdvRecord');
+    if (btnSaveAdv) {
+      btnSaveAdv.addEventListener('click', async () => {
+        const rec = buildCurrentAdvRecordObject();
+        const check = CA.validateRecord(rec);
+        if (!check.valid) {
+          showToast(`❌ 欄位驗證未通過：${check.errors.join(', ')}`, 'error');
+          return;
+        }
+
+        CA.saveRecord(rec, getActiveObserver());
+
+        // 若勾選同步累加至基礎速記表
+        const syncToBasic = document.getElementById('advSyncToBasicCheckbox');
+        if (syncToBasic && syncToBasic.checked) {
+          const schedIdx = mapPeriodIntToScheduleIndex(rec.context.period);
+          const targetPeriod = dayRecord.periods[schedIdx];
+          if (targetPeriod) {
+            const behMeta = CA.getBehaviorByCode(rec.behavior.target_code);
+            const basicCode = behMeta?.basicCodeMap || '+';
+            const bItem = targetPeriod.behaviors.find(x => x.code === basicCode);
+            if (bItem) {
+              bItem.count += Number(rec.metrics.frequency || 1);
+            }
+            const notePiece = `[進階 ${rec.behavior.target_code} ${rec.context.subject}] 前因:${rec.antecedent.details} | 處置:${rec.intervention.strategy_label}(${rec.intervention.outcome_label}) ${rec.qualitative_notes}`;
+            targetPeriod.contextNote = targetPeriod.contextNote
+              ? `${targetPeriod.contextNote}；${notePiece}`
+              : notePiece;
+            window.GoogleSync.saveLocalRecord(dayRecord);
+            renderPeriodTabs();
+            refreshPeriodUI();
+          }
+        }
+
+        // 同步至雲端 Google Sheets
+        const syncRes = await window.GoogleSync.syncAdvancedRecordToGoogle(rec);
+        if (syncRes.success) {
+          showToast(`🎉 進階紀錄【${rec.record_id}】已儲存並同步至 Google 試算表！`, 'success');
+        } else {
+          showToast(`💾 進階紀錄【${rec.record_id}】已儲存於本機（可匯出 Word 或 JSON）！`, 'success');
+        }
+
+        // 自動產生下一筆流水號
+        const recDate = (rec.timestamp || '').split('T')[0] || currentDate;
+        advState.record_id = CA.generateRecordId(recDate);
+        const recIdInput = document.getElementById('advRecordIdInput');
+        if (recIdInput) recIdInput.value = advState.record_id;
+
+        updateAdvJsonPreview();
+        renderAdvDashboardAndRecords();
+      });
+    }
+
+    // 匯出進階臨床 Word 報表
+    const btnExportAdvWord = document.getElementById('btnExportAdvWord');
+    if (btnExportAdvWord) {
+      btnExportAdvWord.addEventListener('click', () => {
+        const stuId = advState.student_id || currentCaseId;
+        let recs = CA.getRecordsByFilter(stuId, null, 'all');
+        if (recs.length === 0) recs = CA.getAllRecords();
+        if (recs.length === 0) {
+          // 若尚未儲存任何紀錄，直接匯出當前表單預覽中的紀錄
+          recs = [buildCurrentAdvRecordObject()];
+        }
+        window.DocxExport.exportAdvancedClinicalWord(stuId, recs, '進階臨床行為量化與鑑別評估');
+      });
+    }
+
+    // 匯出標準 JSON
+    const btnExportAdvJson = document.getElementById('btnExportAdvJson');
+    if (btnExportAdvJson) {
+      btnExportAdvJson.addEventListener('click', () => {
+        const stuId = advState.student_id || currentCaseId;
+        let recs = CA.getRecordsByFilter(stuId, null, 'all');
+        if (recs.length === 0) recs = CA.getAllRecords();
+        if (recs.length === 0) {
+          recs = [buildCurrentAdvRecordObject()];
+        }
+        window.DocxExport.exportAdvancedJson(stuId, recs);
+      });
+    }
   }
 
   // 載入後端程式碼至設定頁預覽

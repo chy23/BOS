@@ -1,6 +1,7 @@
 /**
- * DocxExport: 負責將行為紀錄與統計分析匯出為排版整齊的 Word 報告
- * 升級包含：多師觀察者註記、A-B-C 行為脈絡、正向良好行為、ADHD 三面向評估摘要
+ * DocxExport: 負責將行為紀錄與統計分析匯出為排版整齊的 Word 報告及標準 JSON
+ * 升級包含：多師觀察者註記、A-B-C 行為脈絡、正向良好行為、ADHD 三面向評估摘要、
+ * 以及「進階臨床量化模式 (ClassroomBehaviorRecord Schema)」與「臨床疾病診斷鑑別映射報表」。
  */
 class DocxExport {
   /**
@@ -16,14 +17,19 @@ class DocxExport {
       .replace(/'/g, '&#039;');
   }
 
+  /**
+   * 匯出當日 Word 報告（自動整合原始速記資料 ＋ 當日進階臨床量化紀錄）
+   */
   exportDailyWord(record, summary) {
     if (!record) {
       alert('請先選擇或儲存當日紀錄！');
       return;
     }
 
-    const caseId = this.escapeHtml(record.caseId || '未指定');
-    const date = this.escapeHtml(record.date || new Date().toISOString().split('T')[0]);
+    const rawCaseId = record.caseId || '未指定';
+    const rawDate = record.date || new Date().toISOString().split('T')[0];
+    const caseId = this.escapeHtml(rawCaseId);
+    const date = this.escapeHtml(rawDate);
     const medTime = this.escapeHtml(record.medTime || '無 / 未記錄');
     const discomfort = this.escapeHtml(record.discomfort || '無特殊異常');
 
@@ -53,7 +59,7 @@ class DocxExport {
       rowsHtml += `
         <tr>
           <td style="text-align: center; font-weight: bold; background-color: #F8FAFC;">
-            ${p.name}<br>${observerTag}
+            ${this.escapeHtml(p.name)}<br>${observerTag}
           </td>
           <td>${behaviorDesc.join('<br>')}${posTag}</td>
           <td>${contextHtml}</td>
@@ -67,14 +73,24 @@ class DocxExport {
         .filter(r => r.count > 0)
         .map((r, i) => `<tr>
           <td style="text-align:center;">第 ${i + 1} 名</td>
-          <td><b>${r.code}</b> ${r.name}</td>
-          <td style="color:#64748B;">${r.category}</td>
+          <td><b>${this.escapeHtml(r.code)}</b> ${this.escapeHtml(r.name)}</td>
+          <td style="color:#64748B;">${this.escapeHtml(r.category)}</td>
           <td style="text-align:center; font-weight:bold;">${r.count} 次</td>
           <td style="text-align:center;">${r.percentage}%</td>
         </tr>`).join('');
     }
     if (!rankingHtml) {
       rankingHtml = '<tr><td colspan="5" style="text-align:center;">當日無顯著干擾行為紀錄</td></tr>';
+    }
+
+    // 檢查當日是否有進階臨床量化紀錄
+    let advancedSectionHtml = '';
+    if (window.ClinicalAdvanced) {
+      const advRecords = window.ClinicalAdvanced.getRecordsByFilter(rawCaseId, rawDate, 'today');
+      if (advRecords.length > 0) {
+        const advAnalysis = window.ClinicalAdvanced.analyzeClinicalRecords(advRecords);
+        advancedSectionHtml = this.buildAdvancedReportSectionHtml(advRecords, advAnalysis);
+      }
     }
 
     const htmlContent = `
@@ -119,7 +135,7 @@ class DocxExport {
           </tr>
         </table>
 
-        <h2>一、 各節課堂行為歷程與 A-B-C 脈絡紀錄</h2>
+        <h2>一、 各節課堂行為歷程與 A-B-C 脈絡紀錄 (原始速記資料)</h2>
         <table class="record-table">
           <thead>
             <tr>
@@ -153,11 +169,262 @@ class DocxExport {
           <b>觀察結論與輔導建議：</b><br>
           ${summary ? summary.insightText : '無詳細分析。'}
         </div>
+
+        ${advancedSectionHtml}
       </body>
       </html>
     `;
 
     this.downloadWordFile(`BOS行為紀錄_${caseId}_${date}.doc`, htmlContent);
+  }
+
+  /**
+   * 建構進階臨床量化與疾病鑑別映射 HTML 區塊
+   */
+  buildAdvancedReportSectionHtml(records, analysis) {
+    if (!records || records.length === 0) return '';
+
+    const eventRows = records.map(r => {
+      const timePart = (r.timestamp || '').split('T')[1]?.substring(0, 5) || '';
+      const datePart = (r.timestamp || '').split('T')[0] || '';
+      const condTags = (r.behavior?.related_conditions || []).map(c => {
+        const meta = window.ClinicalAdvanced?.RELATED_CONDITIONS_META[c];
+        return `<span class="tag">${this.escapeHtml(meta ? meta.short : c)}</span>`;
+      }).join(' ');
+
+      const intensityMap = { 1: '1-輕度(自我)', 2: '2-中度(鄰近)', 3: '3-重度(全班)' };
+      const intStr = intensityMap[r.metrics?.intensity] || r.metrics?.intensity;
+
+      return `
+        <tr>
+          <td style="font-size:9pt;">
+            <b>${this.escapeHtml(r.record_id)}</b><br>
+            ${this.escapeHtml(datePart)} ${this.escapeHtml(timePart)}<br>
+            第 ${Number(r.context?.period || 1)} 節 · <b>${this.escapeHtml(r.context?.subject)}</b><br>
+            <span style="color:#475569;">${this.escapeHtml(r.context?.activity_type)}</span>
+            ${r.context?.environment_notes ? `<br><small style="color:#64748B;">環境：${this.escapeHtml(r.context.environment_notes)}</small>` : ''}
+          </td>
+          <td style="font-size:9pt;">
+            <b>[${this.escapeHtml(r.antecedent?.category || 'NONE')}]</b><br>
+            ${this.escapeHtml(r.antecedent?.details || '無明顯外部前因')}
+          </td>
+          <td style="font-size:9pt;">
+            <b style="color:#1E3A8A;">${this.escapeHtml(r.behavior?.target_label || r.behavior?.target_code)}</b><br>
+            <small style="color:#64748B;">向度：${this.escapeHtml(r.behavior?.category)}</small><br>
+            ${condTags}
+          </td>
+          <td style="text-align:center; font-size:9pt;">
+            頻率：<b>${Number(r.metrics?.frequency || 1)}</b> 次<br>
+            時長：<b>${Number(r.metrics?.duration_minutes || 0)}</b> 分<br>
+            強度：<b>${this.escapeHtml(intStr)}</b>
+          </td>
+          <td style="font-size:9pt;">
+            <b>處置：</b>${this.escapeHtml(r.intervention?.strategy_label)}<br>
+            <b>成效：</b><span style="color:#047857;">${this.escapeHtml(r.intervention?.outcome_label)}</span>
+            ${r.qualitative_notes ? `<br><div style="margin-top:3pt; color:#334155; background:#F8FAFC; padding:3pt;">質性備註：${this.escapeHtml(r.qualitative_notes)}</div>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const diagRows = (analysis.rankedBehaviors || []).map(b => `
+      <tr>
+        <td><b>${this.escapeHtml(b.code)}</b> ${this.escapeHtml(b.shortName)} (${b.count}次 / ${b.duration}分)</td>
+        <td style="color:#1D4ED8; font-weight:bold;">${this.escapeHtml(b.primary)}</td>
+        <td>${this.escapeHtml(b.differential)}</td>
+        <td style="font-size:9pt; color:#334155;">${this.escapeHtml(b.clinicalKey)}</td>
+      </tr>
+    `).join('');
+
+    const condSummaryRows = (analysis.rankedConditions || []).map((c, idx) => `
+      <tr>
+        <td style="text-align:center;">#${idx + 1}</td>
+        <td><b>${this.escapeHtml(c.label)}</b> (<code>${this.escapeHtml(c.code)}</code>)</td>
+        <td style="text-align:center; font-weight:bold;">${c.count} 次關聯</td>
+        <td style="text-align:center; font-weight:bold; color:#2563EB;">${c.weightedScore}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <h2>三、 進階臨床行為量化紀錄明細 (ClassroomBehaviorRecord Schema)</h2>
+      <table class="record-table">
+        <thead>
+          <tr>
+            <th style="width:20%;">紀錄編號 / 課堂情境</th>
+            <th style="width:18%;">前因與誘發因子 (A)</th>
+            <th style="width:22%;">核心外顯行為與關聯標籤 (B)</th>
+            <th style="width:15%;">量化指標 (Metrics)</th>
+            <th style="width:25%;">介入處置與成效 (C) / 質性觀察</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${eventRows}
+        </tbody>
+      </table>
+
+      <h2>四、 行為代碼與臨床疾病診斷鑑別映射分析</h2>
+      <table class="record-table">
+        <thead>
+          <tr>
+            <th style="width:22%;">觀察到之行為代碼</th>
+            <th style="width:22%;">首要指向疾病 (Primary)</th>
+            <th style="width:22%;">鑑別診斷與共病 (Differential)</th>
+            <th style="width:34%;">臨床鑑別關鍵點</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${diagRows}
+        </tbody>
+      </table>
+
+      <h2>五、 臨床關聯障礙標籤 (related_conditions) 指標統計</h2>
+      <table class="record-table">
+        <thead>
+          <tr>
+            <th style="width:12%;">排序</th>
+            <th style="width:48%;">臨床關聯障礙 / 疾病指標</th>
+            <th style="width:20%;">觸發事件數</th>
+            <th style="width:20%;">強度加權指數</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${condSummaryRows || '<tr><td colspan="4" style="text-align:center;">尚無關聯指標資料</td></tr>'}
+        </tbody>
+      </table>
+      <div style="font-size:9pt; color:#64748B; margin-top:4pt;">
+        註：本表之臨床診斷與鑑別疾病映射僅供教育現場 IEP 團隊、特教篩檢與醫療轉介前之行為觀察量化溝通參考，正式醫療診斷須由兒童青少年精神科/心智科專科醫師綜合臨床評估判定。
+      </div>
+    `;
+  }
+
+  /**
+   * 獨立匯出：進階臨床行為量化與鑑別評估專項 Word 報告
+   */
+  exportAdvancedClinicalWord(studentId, records, filterDesc = '進階臨床觀察') {
+    if (!records || records.length === 0) {
+      alert('目前尚無進階臨床行為紀錄可匯出！請先在進階模式新增紀錄或載入範例。');
+      return;
+    }
+
+    const safeStudentId = this.escapeHtml(studentId || '未指定');
+    const safeDesc = this.escapeHtml(filterDesc);
+    const analysis = window.ClinicalAdvanced.analyzeClinicalRecords(records);
+    const advHtml = this.buildAdvancedReportSectionHtml(records, analysis);
+
+    const antRows = (analysis.rankedAntecedents || []).map(a => `
+      <tr>
+        <td><b>${this.escapeHtml(a.name)}</b> (<code>${this.escapeHtml(a.code)}</code>)</td>
+        <td style="text-align:center; font-weight:bold;">${a.count} 次</td>
+        <td>${this.escapeHtml(a.examples)}</td>
+        <td style="color:#1E3A8A; font-weight:bold;">${this.escapeHtml(a.mechanism)}</td>
+      </tr>
+    `).join('');
+
+    const stratRows = (analysis.strategyEffectiveness || []).map(s => {
+      const rate = s.total > 0 ? Math.round(((s.immediate + s.transient * 0.5) / s.total) * 100) : 0;
+      return `
+        <tr>
+          <td><b>${this.escapeHtml(s.label)}</b></td>
+          <td style="text-align:center;">${s.total} 次</td>
+          <td style="text-align:center; color:#047857; font-weight:bold;">${s.immediate} 次</td>
+          <td style="text-align:center; color:#2563EB;">${s.transient} 次</td>
+          <td style="text-align:center; color:#D97706;">${s.noEffect} 次</td>
+          <td style="text-align:center; color:#E11D48; font-weight:bold;">${s.escalation} 次</td>
+          <td style="text-align:center; font-weight:bold;">${rate}%</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>進階臨床行為量化與鑑別評估報告 - ${safeStudentId}</title>
+        <style>
+          body { font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif; font-size: 10.5pt; color: #1E293B; line-height: 1.5; }
+          h1 { text-align: center; font-size: 16.5pt; margin-bottom: 2pt; color: #0F172A; }
+          h2 { font-size: 12pt; margin-top: 14pt; margin-bottom: 5pt; color: #1E3A8A; border-bottom: 1.5pt solid #1E3A8A; padding-bottom: 2pt; }
+          .record-table { width: 100%; border-collapse: collapse; margin-bottom: 10pt; }
+          .record-table th { background-color: #1E3A8A; color: #ffffff; padding: 5pt; border: 1pt solid #1E40AF; font-size: 9.5pt; }
+          .record-table td { padding: 5pt 6pt; border: 1pt solid #CBD5E1; vertical-align: top; font-size: 9.5pt; }
+          .tag { display: inline-block; background-color: #DBEAFE; color: #1E40AF; padding: 1pt 3.5pt; border-radius: 2pt; font-size: 8.5pt; margin-right: 2pt; }
+          .summary-box { background-color: #F8FAFC; border: 1pt solid #CBD5E1; padding: 8pt 10pt; margin-bottom: 10pt; }
+        </style>
+      </head>
+      <body>
+        <h1>國小課堂行為觀察量化與臨床鑑別評估報告 (進階版)</h1>
+        <p style="text-align:center; color:#475569; font-size:9.5pt;">
+          去識別化學生代碼：<b>${safeStudentId}</b> ｜ 範圍：<b>${safeDesc}</b> ｜ 總事件數：<b>${analysis.totalEvents} 筆</b> ｜ 累積持續時間：<b>${analysis.totalDuration} 分鐘</b> ｜ 平均干擾強度：<b>${analysis.avgIntensity} / 3.0</b>
+        </p>
+
+        ${advHtml}
+
+        <h2>六、 誘發因子 (Antecedents) 與疾病機制歸因分析</h2>
+        <table class="record-table">
+          <thead>
+            <tr>
+              <th style="width:24%;">誘發分類</th>
+              <th style="width:10%;">出現次數</th>
+              <th style="width:33%;">觸發情境範例</th>
+              <th style="width:33%;">最可能關聯的疾病機制</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${antRows || '<tr><td colspan="4" style="text-align:center;">尚無前因資料</td></tr>'}
+          </tbody>
+        </table>
+
+        <h2>七、 教師介入處置策略 (Intervention) 成效分析矩陣</h2>
+        <table class="record-table">
+          <thead>
+            <tr>
+              <th style="width:28%;">介入處置策略</th>
+              <th style="width:12%;">使用次數</th>
+              <th style="width:12%;">立即改善</th>
+              <th style="width:12%;">短暫改善</th>
+              <th style="width:12%;">毫無反應</th>
+              <th style="width:12%;">抗拒加劇</th>
+              <th style="width:12%;">綜合有效率</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stratRows || '<tr><td colspan="7" style="text-align:center;">尚無介入策略資料</td></tr>'}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const dateTag = new Date().toISOString().split('T')[0];
+    this.downloadWordFile(`BOS進階臨床鑑別報告_${safeStudentId}_${dateTag}.doc`, htmlContent);
+  }
+
+  /**
+   * 匯出符合 Draft 2020-12 ClassroomBehaviorRecord Schema 的標準 JSON 檔案
+   */
+  exportAdvancedJson(studentId, records) {
+    if (!records || records.length === 0) {
+      alert('目前尚無進階臨床紀錄可匯出！');
+      return;
+    }
+    // 剝除內部 _meta 欄位，確保 100% 符合 JSON Schema 規範
+    const cleanRecords = records.map(r => {
+      const copy = { ...r };
+      delete copy._meta;
+      return copy;
+    });
+
+    const jsonString = JSON.stringify(cleanRecords.length === 1 ? cleanRecords[0] : cleanRecords, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateTag = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    a.download = `ClassroomBehaviorRecord_${studentId || 'ALL'}_${dateTag}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   exportWeeklyOrCumulativeWord(caseId, filterDesc, summary) {
@@ -206,31 +473,42 @@ class DocxExport {
       `;
     });
 
+    // 若該個案也有進階紀錄，一併附加於累計報告尾端
+    let advSection = '';
+    if (window.ClinicalAdvanced) {
+      const advRecords = window.ClinicalAdvanced.getRecordsByFilter(caseId, null, 'all');
+      if (advRecords.length > 0) {
+        const advAnalysis = window.ClinicalAdvanced.analyzeClinicalRecords(advRecords);
+        advSection = this.buildAdvancedReportSectionHtml(advRecords, advAnalysis);
+      }
+    }
+
     const htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset='utf-8'>
-        <title>行為時段分佈與累計分析報告 - ${caseId}</title>
+        <title>行為時段分佈與累計分析報告 - ${safeCaseId}</title>
         <style>
           body { font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif; font-size: 11pt; color: #1E293B; line-height: 1.5; }
           h1 { text-align: center; font-size: 17pt; margin-bottom: 2pt; color: #0F172A; }
           h2 { font-size: 12.5pt; margin-top: 14pt; margin-bottom: 5pt; color: #1E3A8A; border-bottom: 1.5pt solid #1E3A8A; padding-bottom: 2pt; }
-          .table { width: 100%; border-collapse: collapse; margin-bottom: 12pt; }
-          .table th { background-color: #2563EB; color: #ffffff; padding: 5.5pt; border: 1pt solid #1D4ED8; font-size: 9.5pt; }
-          .table td { padding: 5.5pt; border: 1pt solid #CBD5E1; font-size: 9.5pt; }
+          .table, .record-table { width: 100%; border-collapse: collapse; margin-bottom: 12pt; }
+          .table th, .record-table th { background-color: #2563EB; color: #ffffff; padding: 5.5pt; border: 1pt solid #1D4ED8; font-size: 9.5pt; }
+          .table td, .record-table td { padding: 5.5pt; border: 1pt solid #CBD5E1; font-size: 9.5pt; vertical-align: top; }
+          .tag { display: inline-block; background-color: #DBEAFE; color: #1E40AF; padding: 1pt 3.5pt; border-radius: 2pt; font-size: 8.5pt; margin-right: 2pt; }
           .insight { background-color: #EFF6FF; border-left: 4pt solid #3B82F6; padding: 8pt 10pt; margin-top: 8pt; font-size: 10.5pt; }
         </style>
       </head>
       <body>
         <h1>學生行為觀察長期累計與時段熱區分析</h1>
-        <p style="text-align:center; color:#64748B;">個案代號：<b>${caseId}</b> ｜ 分析範圍：<b>${filterDesc}</b> ｜ 觀察天數：<b>${summary.totalDays} 天</b></p>
+        <p style="text-align:center; color:#64748B;">個案代號：<b>${safeCaseId}</b> ｜ 分析範圍：<b>${safeFilterDesc}</b> ｜ 觀察天數：<b>${summary.totalDays} 天</b></p>
         
         <h2>一、 核心結論摘要</h2>
         <div class="insight">
           ${summary.insightText}
         </div>
 
-        <h2>二、 時段 × 行為代號 交叉分佈熱區表 (Heatmap)</h2>
+        <h2>二、 時段 × 行為項目 交叉分佈熱區表 (Heatmap)</h2>
         <table class="table">
           <thead>
             <tr>
@@ -243,11 +521,13 @@ class DocxExport {
             ${matrixRows}
           </tbody>
         </table>
+
+        ${advSection}
       </body>
       </html>
     `;
 
-    this.downloadWordFile(`BOS累計分析_${caseId}_${filterDesc}.doc`, htmlContent);
+    this.downloadWordFile(`BOS累計分析_${safeCaseId}_${safeFilterDesc}.doc`, htmlContent);
   }
 
   downloadWordFile(filename, html) {

@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClassroomBehaviorRecord",
+  "description": "國小課堂行為觀察與量化紀錄資料結構（含臨床鑑別疾病指標映射）",
+  "type": "object",
+  "required": [
+    "record_id",
+    "student_id",
+    "timestamp",
+    "context",
+    "behavior",
+    "metrics",
+    "intervention"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "description": "紀錄唯一識別碼，格式如 rec_YYYYMMDD_流水號",
+      "pattern": "^rec_[0-9]{8}_[0-9A-Za-z]+$"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "去識別化學生座號或代碼",
+      "examples": ["S105", "B03", "A7K"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "行為發生的 ISO 8601 時間戳記"
+    },
+    "context": {
+      "type": "object",
+      "description": "一、 基本情境資訊",
+      "required": ["subject", "period", "activity_type"],
+      "properties": {
+        "period": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "description": "當日課堂節次（1-8 節）"
+        },
+        "subject": {
+          "type": "string",
+          "description": "課堂科目",
+          "enum": ["國語", "數學", "英語", "社會", "自然", "健體", "藝文", "綜合", "彈性/自習", "下課轉銜"]
+        },
+        "activity_type": {
+          "type": "string",
+          "description": "當前教學活動型態",
+          "enum": [
+            "全班聽講",
+            "個別書寫作答",
+            "小組討論合作",
+            "多媒體/平板操作",
+            "動態操作/體育競賽",
+            "收拾轉銜/移動"
+          ]
+        },
+        "environment_notes": {
+          "type": "string",
+          "description": "物理環境備註（如：前排中間、靠窗邊、隔壁有特定同儕等）"
+        }
+      }
+    },
+    "antecedent": {
+      "type": "object",
+      "description": "二、 前因與誘發因子 (A)",
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "主要誘發來源分類",
+          "enum": [
+            "TASK_DIFFICULTY",
+            "SENSORY_STIMULUS",
+            "SOCIAL_INTERACTION",
+            "ROUTINE_CHANGE",
+            "UNSTRUCTURED_TIME",
+            "NONE_OBSERVED"
+          ]
+        },
+        "details": {
+          "type": "string",
+          "description": "誘發因子具體描述",
+          "enum": [
+            "面對長篇閱讀/大量文字書寫",
+            "數學難題/多步驟解題卡關",
+            "同儕發出聲音或視覺干擾",
+            "廣播/走廊騷動/外界感官刺激",
+            "未被點到發言/輪流等待中",
+            "同儕言語觸碰或分組被拒",
+            "突發流程變動/更換代課老師",
+            "等待發卷或切換活動之空檔",
+            "無明顯外部前因"
+          ]
+        }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "description": "三、 核心外顯行為 (B)",
+      "required": ["category", "target_code"],
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "行為向度主分類",
+          "enum": [
+            "INATTENTION",
+            "HYPERACTIVITY",
+            "IMPULSIVITY_DISRUPTION",
+            "EMOTION_OPPOSITION",
+            "TIC_SENSORY",
+            "HYPERFOCUS"
+          ]
+        },
+        "target_code": {
+          "type": "string",
+          "description": "具體行為代碼",
+          "enum": [
+            "OFF",
+            "FD",
+            "TI",
+            "WM",
+            "LM",
+            "OOS",
+            "MV",
+            "NV",
+            "CO",
+            "TB",
+            "IN",
+            "RU",
+            "FR",
+            "RSD",
+            "TIC_M",
+            "TIC_V",
+            "HF"
+          ]
+        },
+        "target_label": {
+          "type": "string",
+          "description": "前端顯示的中文行為標籤",
+          "enum": [
+            "脫離任務/發呆 (OFF)",
+            "把玩文具/分心物 (FD)",
+            "啟動困難/拖延 (TI)",
+            "指令遺忘/工作記憶弱 (WM)",
+            "物品遺漏/用具混亂 (LM)",
+            "未經許可擅自離座 (OOS)",
+            "身體躁動/晃椅/抖腳 (MV)",
+            "製造無關聲響/怪聲 (NV)",
+            "未舉手搶答 (CO)",
+            "插話/打斷他人 (TB)",
+            "侵犯空間/拿取他人物品 (IN)",
+            "破壞規則/堅持己見 (RU)",
+            "挫折抗拒/發脾氣/撕紙 (FR)",
+            "被糾正激烈防禦 (RSD)",
+            "動作型抽動/眨眼/甩頭 (TIC_M)",
+            "聲語型抽動/清喉嚨/哼聲 (TIC_V)",
+            "特定項目過度專注 (HF)"
+          ]
+        },
+        "related_conditions": {
+          "type": "array",
+          "description": "該行為在臨床上常見關聯的可能障礙或疾病標籤",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ADHD_INATTENTION",
+              "ADHD_HYPER_IMPULSIVE",
+              "ASD",
+              "SLD_READING_WRITING",
+              "SLD_MATH",
+              "TIC_TOURETTE",
+              "ODD",
+              "ANXIETY_RSD",
+              "SPD"
+            ]
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "四、 行為量化指標",
+      "required": ["intensity"],
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "此事件代表的發生次數（計次點擊通常為 1）"
+        },
+        "duration_minutes": {
+          "type": "number",
+          "minimum": 0,
+          "description": "行為持續時間（分鐘），適用於發呆、離座、抗拒等時長觀察"
+        },
+        "intensity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3,
+          "description": "嚴重/干擾強度：1=輕度(自我干擾), 2=中度(干擾鄰近他人), 3=重度(中斷全班或具破壞性)"
+        }
+      }
+    },
+    "intervention": {
+      "type": "object",
+      "description": "五、 介入處置與成效 (C)",
+      "required": ["strategy", "outcome"],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "description": "大人採取的立即處置方式",
+          "enum": [
+            "NONE_IGNORE",
+            "NON_VERBAL_PROMPT",
+            "VERBAL_REMINDER",
+            "TASK_ADAPTATION",
+            "POSITIVE_REINFORCEMENT",
+            "CALM_DOWN_AREA",
+            "PHYSICAL_GUIDANCE"
+          ]
+        },
+        "strategy_label": {
+          "type": "string",
+          "description": "處置方式中文標籤",
+          "enum": [
+            "暫時忽視/未介入",
+            "非口語手勢/眼神/輕敲桌面",
+            "個別口頭提示/點名",
+            "調整難度/切分任務步驟",
+            "即時正向回饋/集點讚美",
+            "帶至冷靜角/暫離刺激源",
+            "肢體引導回座"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "description": "介入後的學生反應成效",
+          "enum": [
+            "IMMEDIATE_IMPROVEMENT",
+            "TRANSIENT_IMPROVEMENT",
+            "NO_EFFECT",
+            "ESCALATION"
+          ]
+        },
+        "outcome_label": {
+          "type": "string",
+          "description": "成效中文標籤",
+          "enum": [
+            "立即改善（重回任務並持續 > 5分鐘）",
+            "短暫改善（短暫回神但 < 1分鐘後復發）",
+            "毫無反應（維持原狀）",
+            "抗拒加劇（情緒升級、頂撞抗拒）"
+          ]
+        }
+      }
+    },
+    "qualitative_notes": {
+      "type": "string",
+      "description": "質性文字觀察、對話記錄或身體抱怨（如：稱頭痛想吐、趴下抗拒時說『我就是笨』）"
+    }
+  }
+}

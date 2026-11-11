@@ -159,6 +159,37 @@ class GoogleSync {
     }
   }
 
+  /**
+   * 同步單筆進階臨床紀錄 (ClassroomBehaviorRecord) 至 Google 試算表
+   */
+  async syncAdvancedRecordToGoogle(record) {
+    const apiUrl = this.getApiUrl();
+    if (!apiUrl) return { success: false, reason: '未設定 Web App 網址' };
+
+    try {
+      const cleanRecord = { ...record };
+      delete cleanRecord._meta;
+      const payload = {
+        action: 'upsertAdvanced',
+        observer: this.getObserverRole(),
+        record: cleanRecord
+      };
+
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      if (window.ClinicalAdvanced) {
+        window.ClinicalAdvanced.markSynced(record.record_id);
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
   async syncAllPending() {
     const all = this.getAllLocalRecords();
     const pendingList = all.filter(r => r.pendingSync === true);

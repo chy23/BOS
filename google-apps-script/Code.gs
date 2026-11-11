@@ -9,6 +9,7 @@
  */
 
 const SHEET_NAME_RAW = "行為原始紀錄";
+const SHEET_NAME_ADVANCED = "進階臨床行為紀錄";
 const SHEET_NAME_CASES = "個案代號清單";
 
 function doGet(e) {
@@ -33,6 +34,8 @@ function doPost(e) {
 
     if (action === "upsert") {
       return handleUpsertRecord(data);
+    } else if (action === "upsertAdvanced") {
+      return handleUpsertAdvancedRecord(data);
     } else if (action === "deleteCase") {
       return handleDeleteCase(data.caseId);
     } else if (action === "deleteRecord") {
@@ -124,6 +127,79 @@ function handleUpsertRecord(payload) {
     updatedPeriods: targetPeriodNames,
     rowsCount: rowsToInsert.length,
     updatedAt: timestamp
+  });
+}
+
+/**
+ * 新增或更新進階臨床行為紀錄 (ClassroomBehaviorRecord Schema)
+ */
+function handleUpsertAdvancedRecord(payload) {
+  const rec = payload.record || {};
+  const recordId = sanitizeCell(String(rec.record_id || ""));
+  const studentId = sanitizeCell(String(rec.student_id || "").toUpperCase());
+  const timestamp = sanitizeCell(String(rec.timestamp || ""));
+  const observer = sanitizeCell(String(payload.observer || "課堂教師"));
+
+  if (!/^rec_[0-9]{8}_[0-9A-Za-z]+$/.test(recordId)) {
+    return jsonResponse({ status: "error", message: "無效的進階紀錄編號 (record_id)" }, 400);
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const advSheet = getOrCreateSheet(ss, SHEET_NAME_ADVANCED, [
+    "紀錄編號(record_id)", "學生代碼(student_id)", "發生時間(timestamp)", "記錄老師",
+    "節次(period)", "科目(subject)", "活動型態(activity_type)", "物理環境備註(environment_notes)",
+    "前因分類(antecedent.category)", "前因詳述(antecedent.details)",
+    "行為向度(behavior.category)", "行為代碼(target_code)", "行為標籤(target_label)", "關聯疾病標籤(related_conditions)",
+    "頻率(frequency)", "持續分鐘(duration_minutes)", "干擾強度(intensity)",
+    "介入策略(strategy)", "介入處置標籤(strategy_label)", "介入成效代碼(outcome)", "介入成效標籤(outcome_label)",
+    "質性觀察備註(qualitative_notes)", "完整標準JSON"
+  ]);
+
+  // 若已有相同 record_id 則先移除舊列
+  const data = advSheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === String(rec.record_id)) {
+      advSheet.deleteRow(i + 1);
+    }
+  }
+
+  const ctx = rec.context || {};
+  const ant = rec.antecedent || {};
+  const beh = rec.behavior || {};
+  const met = rec.metrics || {};
+  const intv = rec.intervention || {};
+
+  const row = [
+    recordId,
+    studentId,
+    timestamp,
+    observer,
+    Number(ctx.period || 1),
+    sanitizeCell(ctx.subject || ""),
+    sanitizeCell(ctx.activity_type || ""),
+    sanitizeCell(ctx.environment_notes || ""),
+    sanitizeCell(ant.category || ""),
+    sanitizeCell(ant.details || ""),
+    sanitizeCell(beh.category || ""),
+    sanitizeCell(beh.target_code || ""),
+    sanitizeCell(beh.target_label || ""),
+    sanitizeCell((beh.related_conditions || []).join(", ")),
+    Number(met.frequency || 1),
+    Number(met.duration_minutes || 0),
+    Number(met.intensity || 1),
+    sanitizeCell(intv.strategy || ""),
+    sanitizeCell(intv.strategy_label || ""),
+    sanitizeCell(intv.outcome || ""),
+    sanitizeCell(intv.outcome_label || ""),
+    sanitizeCell(rec.qualitative_notes || ""),
+    sanitizeCell(JSON.stringify(rec))
+  ];
+
+  advSheet.appendRow(row);
+  return jsonResponse({
+    status: "success",
+    message: "進階臨床紀錄已寫入雲端試算表",
+    record_id: rec.record_id
   });
 }
 

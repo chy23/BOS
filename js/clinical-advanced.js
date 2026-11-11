@@ -251,7 +251,7 @@ class ClinicalAdvancedManager {
         label: '未經許可擅自離座 (OOS)',
         shortName: '未經許可擅自離座',
         category: 'HYPERACTIVITY',
-        basicCodeMap: '～', // 對應基礎版：～ 扭動/動作
+        basicCodeMap: '△', // 對應基礎版：△ 擅自離開座位
         primary: 'ADHD（過動/衝動型）',
         differential: '對立反抗症（ODD）、自閉症（逃避情境）',
         clinicalKey: 'ADHD 離座常無特定目的（晃一晃動一動）；ODD 多為挑戰規則；自閉症常為逃離感官負荷過重環境。',
@@ -273,7 +273,7 @@ class ClinicalAdvancedManager {
         label: '製造無關聲響/怪聲 (NV)',
         shortName: '製造無關聲響/怪聲',
         category: 'HYPERACTIVITY',
-        basicCodeMap: '×', // 對應基礎版：× 干擾附近人
+        basicCodeMap: '⚡', // 對應基礎版：⚡ 發出怪聲、不自主抽動
         primary: 'ADHD（衝動抑制不足）',
         differential: '抽動症/妥瑞氏症、自閉症自我刺激（Stimming）',
         clinicalKey: 'ADHD 常是哼歌、敲桌等節奏性聲響；妥瑞氏症為喉音、清喉嚨、不自主抽發怪聲。',
@@ -317,7 +317,7 @@ class ClinicalAdvancedManager {
         label: '破壞規則/堅持己見 (RU)',
         shortName: '破壞規則/堅持己見',
         category: 'EMOTION_OPPOSITION',
-        basicCodeMap: '×',
+        basicCodeMap: '＃', // 對應基礎版：＃ 情緒抗拒、發脾氣、拒寫
         primary: '自閉症（固著性行為）',
         differential: '對立反抗症（ODD）、ADHD（挫折耐受差）',
         clinicalKey: '自閉症堅持「規則必須照我的標準流程」；ODD 則是「專門對抗權威與師長指令」。',
@@ -328,7 +328,7 @@ class ClinicalAdvancedManager {
         label: '挫折抗拒/發脾氣/撕紙 (FR)',
         shortName: '挫折抗拒/發脾氣/撕紙',
         category: 'EMOTION_OPPOSITION',
-        basicCodeMap: '×',
+        basicCodeMap: '＃', // 對應基礎版：＃ 情緒抗拒、發脾氣、拒寫
         primary: '對立反抗症（ODD） / 情緒調節障礙',
         differential: '學習障礙、自閉症感官崩潰（Meltdown）',
         clinicalKey: '面對學習卡關時的情緒爆發。若伴隨極端仇視權威屬 ODD；若伴隨文字解碼障礙則多源自學習障礙引發的次發性情緒問題。',
@@ -339,7 +339,7 @@ class ClinicalAdvancedManager {
         label: '被糾正激烈防禦 (RSD)',
         shortName: '被糾正激烈防禦',
         category: 'EMOTION_OPPOSITION',
-        basicCodeMap: '！',
+        basicCodeMap: '＃', // 對應基礎版：＃ 情緒抗拒、發脾氣、拒寫
         primary: '拒絕敏感焦慮（RSD / ADHD共病）',
         differential: '社交焦慮症、創傷後壓力特質',
         clinicalKey: '接收到善意修正卻解讀為毀滅性批判，產生極度羞愧感與攻擊性防衛。',
@@ -350,7 +350,7 @@ class ClinicalAdvancedManager {
         label: '動作型抽動/眨眼/甩頭 (TIC_M)',
         shortName: '動作型抽動（眨眼/甩頭）',
         category: 'TIC_SENSORY',
-        basicCodeMap: '～',
+        basicCodeMap: '⚡', // 對應基礎版：⚡ 發出怪聲、不自主抽動
         primary: '抽動症 / 妥瑞氏症',
         differential: '兒童焦慮症、過敏性結膜炎（需生理鑑別）',
         clinicalKey: '不自主肌肉抽搐，在壓力大、疲勞、專注抑制解除時顯著增加。',
@@ -361,7 +361,7 @@ class ClinicalAdvancedManager {
         label: '聲語型抽動/清喉嚨/哼聲 (TIC_V)',
         shortName: '聲語型抽動（清喉嚨/哼聲）',
         category: 'TIC_SENSORY',
-        basicCodeMap: '×',
+        basicCodeMap: '⚡', // 對應基礎版：⚡ 發出怪聲、不自主抽動
         primary: '抽動症 / 妥瑞氏症',
         differential: '慢性咽喉炎/過敏性鼻炎（倒流）',
         clinicalKey: '需先排除過敏等生理器質病變。妥瑞抽語通常伴隨動作抽動，具突發性與強迫感。',

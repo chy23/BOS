@@ -9,11 +9,14 @@ class Analytics {
   constructor() {
     this.behaviorCodes = [
       { code: '○', name: '玩文具、雜物、桌椅', category: '注意力不足 (Inattention)', color: '#3B82F6' },
-      { code: '+', name: '放空、發呆', category: '注意力不足 (Inattention)', color: '#10B981' },
+      { code: '+', name: '放空發呆、啟動拖延', category: '注意力不足 (Inattention)', color: '#10B981' },
       { code: '↑', name: '尋找東西、遺失物', category: '注意力不足 (Inattention)', color: '#F59E0B' },
-      { code: '～', name: '扭、抖動身體', category: '過動現象 (Hyperactivity)', color: '#8B5CF6' },
-      { code: '×', name: '以動作、講話干擾附近人', category: '衝動控制 (Impulsivity)', color: '#EF4444' },
-      { code: '！', name: '未舉手發言、搶話', category: '衝動控制 (Impulsivity)', color: '#EC4899' },
+      { code: '～', name: '扭、抖動身體', category: '過動與動作調節 (Hyperactivity)', color: '#8B5CF6' },
+      { code: '△', name: '擅自離開座位', category: '過動與動作調節 (Hyperactivity)', color: '#4F46E5' },
+      { code: '×', name: '動作、講話干擾他人', category: '衝動與人際干擾 (Impulsivity)', color: '#EF4444' },
+      { code: '！', name: '未舉手發言、搶話', category: '衝動與人際干擾 (Impulsivity)', color: '#EC4899' },
+      { code: '＃', name: '情緒抗拒、發脾氣、拒寫', category: '情緒與對立抗拒 (Emotion/ODD)', color: '#B91C1C' },
+      { code: '⚡', name: '發出怪聲、不自主抽動', category: '抽動與感官動作 (Tic/Sensory)', color: '#0D9488' },
       { code: '★', name: '正向良好適應行為', category: '正向行為 (Positive)', color: '#F59E0B' },
       { code: 'V', name: '無紀錄/常態良好', category: '常態穩定', color: '#6B7280' }
     ];
@@ -122,11 +125,11 @@ class Analytics {
       });
     });
 
-    // ADHD 三大面向分類加總
+    // ADHD 與臨床三大面向分類加總
     const adhdCategories = {
       inattention: (countByCode['○'] || 0) + (countByCode['+'] || 0) + (countByCode['↑'] || 0),
-      hyperactivity: (countByCode['～'] || 0),
-      impulsivity: (countByCode['×'] || 0) + (countByCode['！'] || 0),
+      hyperactivity: (countByCode['～'] || 0) + (countByCode['△'] || 0) + (countByCode['⚡'] || 0),
+      impulsivity: (countByCode['×'] || 0) + (countByCode['！'] || 0) + (countByCode['＃'] || 0),
       positive: totalPositive
     };
 

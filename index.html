@@ -758,24 +758,24 @@
         </div>
       </div>
 
-      <!-- ADHD 三大面向診斷與 IEP 評估分佈 -->
+      <!-- ADHD 與臨床三大面向診斷與 IEP 評估分佈 -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-        <h4 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-2.5">ADHD 三大核心面向觀察分佈 (心智科門診與 IEP 參考)</h4>
+        <h4 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-2.5">ADHD 與臨床三大核心面向觀察分佈 (心智科門診與 IEP 參考)</h4>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl">
-            <span class="text-xs font-bold text-blue-800">1. 注意力不足 (Inattention)</span>
+            <span class="text-xs font-bold text-blue-800">1. 注意力與執行功能 (Inattention)</span>
             <p id="adhdInattentionCount" class="text-xl font-black text-blue-900 mt-1">0 次</p>
-            <span class="text-[10px] text-blue-700">涵蓋：玩文具○、放空+、找東西↑</span>
+            <span class="text-[10px] text-blue-700">涵蓋：玩文具○、放空/啟動拖延+、找東西↑</span>
           </div>
           <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl">
-            <span class="text-xs font-bold text-purple-800">2. 過動現象 (Hyperactivity)</span>
+            <span class="text-xs font-bold text-purple-800">2. 過動與抽動調節 (Hyperactivity / Tic)</span>
             <p id="adhdHyperactivityCount" class="text-xl font-black text-purple-900 mt-1">0 次</p>
-            <span class="text-[10px] text-purple-700">涵蓋：扭動身體～、離座小動作</span>
+            <span class="text-[10px] text-purple-700">涵蓋：扭動身體～、擅自離座△、怪聲/抽動⚡</span>
           </div>
           <div class="bg-rose-50 border border-rose-200 p-3 rounded-xl">
-            <span class="text-xs font-bold text-rose-800">3. 衝動控制 (Impulsivity)</span>
+            <span class="text-xs font-bold text-rose-800">3. 衝動與情緒抗拒 (Impulsivity / ODD)</span>
             <p id="adhdImpulsivityCount" class="text-xl font-black text-rose-900 mt-1">0 次</p>
-            <span class="text-[10px] text-rose-700">涵蓋：干擾同儕×、未舉手搶話！</span>
+            <span class="text-[10px] text-rose-700">涵蓋：干擾同儕×、未舉手搶話！、情緒抗拒/拒寫＃</span>
           </div>
         </div>
       </div>
@@ -1083,7 +1083,7 @@
           <h4 class="font-black text-slate-900 text-sm">進階模式精簡統整 · 基礎模式融合臨床核心指標 · 疾病鑑別診斷映射</h4>
           <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
             <li><b>更名為「🔬 進階模式」並將 5 大區塊統整為 3 步驟極速卡片</b>：系統識別欄位自動綁定收合、前因分類與具體描述二合一單鍵點選、行為選擇自動連動疾病標籤與單排量化指標。</li>
-            <li><b>基礎模式融合進階高價值指標</b>：於基礎速記模式無痛加入「📚 課堂科目」、「🎯 活動型態」、「⚡ 干擾強度 (1~3級)」、「🎯 介入處遇成效」與升級版臨床 A-B-C 標籤。</li>
+            <li><b>基礎模式升級 3×3 九宮格行為卡與課後選填抽屜</b>：新增「<code>△</code> 擅自離開座位 (OOS)」、「<code>＃</code> 情緒抗拒、發脾氣、拒寫 (FR/RU/RSD)」、「<code>⚡</code> 發出怪聲、不自主抽動 (NV/TIC)」，並將啟動拖延 (TI/WM) 併入「<code>+</code> 放空發呆、啟動拖延」；課堂當下僅保留「📚 課堂科目」與「🎯 活動型態」，其餘 A-B-C 脈絡收合為課後選填抽屜。</li>
             <li><b>標準化資料結構 (JSON Schema Draft 2020-12)</b>：完整實作 <code>ClassroomBehaviorRecord</code> 結構與即時 Schema 驗證器。</li>
             <li><b>6 大向度 17 項具體行為代碼與疾病鑑別映射</b>：涵蓋 <code>OFF</code>~<code>HF</code> 共 17 項代碼，即時對映首要指向疾病、鑑別診斷與 9 大臨床障礙標籤（<code>related_conditions</code>）。</li>
             <li><b>課堂即時碼錶與多元匯出</b>：內建持續時間（<code>duration_minutes</code>）碼錶，支援匯出 Word 鑑別報告與標準 <code>.json</code>。</li>

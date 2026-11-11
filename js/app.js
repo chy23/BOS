@@ -2,14 +2,17 @@
  * App: 主應用程式邏輯控制器 (升級：多師協同、個案管理刪除、A-B-C脈絡、正向行為、雲端程式碼)
  */
 document.addEventListener('DOMContentLoaded', () => {
-  // 核心行為代號 (還原附檔紙本，並配置專屬 GIF 微動畫圖示)
+  // 核心行為代號 (3×3 九宮格：原 6 大代號 + 進階模式導入之 3 項高頻臨床行為，並配置專屬 GIF 微動畫圖示)
   const BEHAVIORS = [
-    { code: '○', name: '玩文具、雜物、桌椅', icon: '✏️', animClass: 'gif-anim-pencil', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅', badgeColor: 'bg-blue-600', lightColor: 'text-blue-600' },
-    { code: '+', name: '放空、發呆', icon: '💭', animClass: 'gif-anim-cloud', desc: '眼神渙散、無視線接觸課堂重點、未跟隨教學', badgeColor: 'bg-emerald-600', lightColor: 'text-emerald-600' },
-    { code: '↑', name: '尋找東西、遺失物', icon: '🔍', animClass: 'gif-anim-search', desc: '低頭翻書包、找筆、掉文具、離開座位搜尋', badgeColor: 'bg-amber-600', lightColor: 'text-amber-600' },
-    { code: '～', name: '扭、抖動身體', icon: '🦵', animClass: 'gif-anim-leg', desc: '頻繁抖腳、扭動扭曲身軀、坐立難安', badgeColor: 'bg-purple-600', lightColor: 'text-purple-600' },
-    { code: '×', name: '以動作、講話干擾附近人', icon: '🗣️', animClass: 'gif-anim-talk', desc: '拍打同學、故意推擠、交談、發出聲響', badgeColor: 'bg-rose-600', lightColor: 'text-rose-600' },
-    { code: '！', name: '未舉手發言、搶話', icon: '📢', animClass: 'gif-anim-speaker', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600', lightColor: 'text-pink-600' }
+    { code: '○', name: '玩文具、雜物、桌椅', icon: '✏️', animClass: 'gif-anim-pencil', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅 (對應 FD)', badgeColor: 'bg-blue-600', lightColor: 'text-blue-600' },
+    { code: '+', name: '放空發呆、啟動拖延', icon: '💭', animClass: 'gif-anim-cloud', desc: '眼神渙散、聽完指令忘記步驟、遲遲不動筆 (對應 OFF/TI/WM)', badgeColor: 'bg-emerald-600', lightColor: 'text-emerald-600' },
+    { code: '↑', name: '尋找東西、遺失物', icon: '🔍', animClass: 'gif-anim-search', desc: '低頭翻書包、找筆、掉文具、物品管理混亂 (對應 LM)', badgeColor: 'bg-amber-600', lightColor: 'text-amber-600' },
+    { code: '～', name: '扭、抖動身體', icon: '🦵', animClass: 'gif-anim-leg', desc: '在座位上頻繁抖腳、扭動身軀、坐立難安 (對應 MV)', badgeColor: 'bg-purple-600', lightColor: 'text-purple-600' },
+    { code: '△', name: '擅自離開座位', icon: '🏃', animClass: 'gif-anim-walk', desc: '未經許可起立、在教室走動、跑去別組或走廊 (對應 OOS)', badgeColor: 'bg-indigo-600', lightColor: 'text-indigo-600' },
+    { code: '×', name: '動作、講話干擾他人', icon: '🗣️', animClass: 'gif-anim-talk', desc: '拍打同學、推擠、私下交談、拿取他人物品 (對應 IN)', badgeColor: 'bg-rose-600', lightColor: 'text-rose-600' },
+    { code: '！', name: '未舉手發言、搶話', icon: '📢', animClass: 'gif-anim-speaker', desc: '老師或同學講話時插話、未舉手搶答、打斷他人 (對應 CO/TB)', badgeColor: 'bg-pink-600', lightColor: 'text-pink-600' },
+    { code: '＃', name: '情緒抗拒、發脾氣、拒寫', icon: '💢', animClass: 'gif-anim-anger', desc: '挫折哭鬧、撕紙摔筆、趴下拒寫、被糾正激烈頂撞 (對應 FR/RU/RSD)', badgeColor: 'bg-red-700', lightColor: 'text-red-700' },
+    { code: '⚡', name: '發出怪聲、不自主抽動', icon: '⚡', animClass: 'gif-anim-zap', desc: '清喉嚨、哼聲、敲桌節奏、頻繁眨眼甩頭等抽動 (對應 NV/TIC)', badgeColor: 'bg-teal-600', lightColor: 'text-teal-600' }
   ];
 
   // 學校作息課表排程
@@ -807,11 +810,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderHeatmap(summary) {
     const columns = [
       { code: '○', label: '玩文具雜物', icon: '✏️' },
-      { code: '+', label: '放空發呆', icon: '💭' },
+      { code: '+', label: '放空/拖延', icon: '💭' },
       { code: '↑', label: '尋找遺失物', icon: '🔍' },
       { code: '～', label: '扭動身體', icon: '🦵' },
+      { code: '△', label: '擅自離座', icon: '🏃' },
       { code: '×', label: '干擾他人', icon: '🗣️' },
       { code: '！', label: '未舉手搶話', icon: '📢' },
+      { code: '＃', label: '情緒抗拒/拒寫', icon: '💢' },
+      { code: '⚡', label: '怪聲/抽動', icon: '⚡' },
       { code: '★', label: '正向好行為', icon: '★' }
     ];
 
@@ -1934,10 +1940,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (targetPeriod) {
             const behMeta = CA.getBehaviorByCode(rec.behavior.target_code);
             const basicCode = behMeta?.basicCodeMap || '+';
-            const bItem = targetPeriod.behaviors.find(x => x.code === basicCode);
-            if (bItem) {
-              bItem.count += Number(rec.metrics.frequency || 1);
+            let bItem = targetPeriod.behaviors.find(x => x.code === basicCode);
+            if (!bItem) {
+              const bObj = BEHAVIORS.find(x => x.code === basicCode);
+              bItem = { code: basicCode, name: bObj ? bObj.name : basicCode, count: 0 };
+              targetPeriod.behaviors.push(bItem);
             }
+            bItem.count += Number(rec.metrics.frequency || 1);
+            if (!targetPeriod.subject && rec.context.subject) targetPeriod.subject = rec.context.subject;
+            if (!targetPeriod.activityType && rec.context.activity_type) targetPeriod.activityType = rec.context.activity_type;
             const notePiece = `[進階 ${rec.behavior.target_code} ${rec.context.subject}] 前因:${rec.antecedent.details} | 處置:${rec.intervention.strategy_label}(${rec.intervention.outcome_label}) ${rec.qualitative_notes}`;
             targetPeriod.contextNote = targetPeriod.contextNote
               ? `${targetPeriod.contextNote}；${notePiece}`

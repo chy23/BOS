@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BOS 行為觀察速記與分析系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- 頂部導覽列 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- 標題與個案識別 -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-blue-500/20">
+          B
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black text-slate-900 tracking-tight">BOS 行為觀察速記</h1>
+            <span id="editModeBadge" class="hidden text-xs px-2 py-0.5 rounded-md font-bold bg-amber-100 text-amber-800 border border-amber-300">
+              ✏️ 編輯模式
+            </span>
+          </div>
+          <p class="text-xs text-slate-600">課堂即時速記 ｜ 情境脈絡分析 ｜ Word 匯出</p>
+        </div>
+      </div>
+
+      <!-- 個案選擇與產生器 -->
+      <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+        <select id="caseSelect" class="bg-white border border-slate-300 text-slate-800 text-sm font-bold rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-blue-500">
+          <!-- 自動注入 -->
+        </select>
+        <button id="btnNewCase" type="button" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1" title="自動生成 3 碼英數亂碼個案">
+          <span>✨</span>
+          <span>新個案</span>
+        </button>
+        <button id="btnCopyCaseId" type="button" class="px-2 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors" title="複製代號">
+          複製
+        </button>
+      </div>
+
+      <!-- 導航分頁按鈕群 -->
+      <nav class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white" data-target="view-record">
+          📝 課堂速記
+        </button>
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all" data-target="view-analytics">
+          📈 統計與熱區
+        </button>
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all" data-target="view-history">
+          🗂 歷史與更新
+        </button>
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all" data-target="view-settings">
+          ⚙️ 雲端設定
+        </button>
+      </nav>
+
+      <!-- 雲端同步狀態標籤 -->
+      <div id="syncBadge" class="text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700">
+        已同步至雲端
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容容器 -->
+  <main class="max-w-7xl mx-auto w-full p-4 flex-1">
+
+    <!-- ========================================== -->
+    <!-- 1. 課堂速記視圖 (view-record) -->
+    <!-- ========================================== -->
+    <section id="view-record" class="view-section space-y-4">
+
+      <!-- 基本設定列 (日期、用藥時間、身體狀況) -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-4">
+        <!-- 日期選擇 -->
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-extrabold text-slate-600">觀察日期</label>
+          <input type="date" id="dateInput" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <!-- 用藥時間 -->
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-extrabold text-slate-600">當日用藥時間</label>
+          <input type="time" id="medTimeInput" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500" placeholder="例如 07:30">
+        </div>
+
+        <!-- 身體不適紀錄 -->
+        <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+          <label class="text-xs font-extrabold text-slate-600">身體不適備忘</label>
+          <input type="text" id="discomfortInput" placeholder="如：頭痛、未吃早餐、睡眠不足（無異常可留空）" class="flex-1 border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <!-- 節次切換列 (橫向滑動/卡片) -->
+      <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+        <div id="periodTabsContainer" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <!-- 自動注入 9 個節次 -->
+        </div>
+      </div>
+
+      <!-- 核心速記區塊 (標題與 V 標記) -->
+      <div class="flex items-center justify-between">
+        <h2 id="currentPeriodTitle" class="text-lg font-black text-slate-900 flex items-center gap-2">
+          早自習 行為觀察
+        </h2>
+        <button id="btnMarkV" type="button" class="px-4 py-2 rounded-xl text-sm font-bold border-2 border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50 transition-all shadow-xs">
+          標記本節為：V 無紀錄/常態穩定
+        </button>
+      </div>
+
+      <!-- 6 大代號速記按鈕網格 (加大按鈕以利平板快速點擊) -->
+      <div id="behaviorCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <!-- 由 app.js 動態渲染 -->
+      </div>
+
+      <!-- 新增欄位：當下情境脈絡 (Context & Setting Event) -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+            <h3 class="font-bold text-slate-900 text-sm">行為當下情境脈絡注記 (環境前事與課堂活動)</h3>
+          </div>
+          <span class="text-xs text-slate-600">可多選常用情境標籤，或補充備註</span>
+        </div>
+
+        <!-- 常用情境快選按鈕群 -->
+        <div id="contextTagsContainer" class="flex flex-wrap gap-2">
+          <!-- 自動注入標籤 -->
+        </div>
+
+        <!-- 詳細情境備註框 (支援手寫/語音轉文字) -->
+        <div>
+          <textarea id="contextNoteInput" rows="2" placeholder="詳細情境脈絡：例如「前事：隔壁同學借橡皮擦，後果：老師口頭提醒後回到座位」..." class="w-full border border-slate-300 rounded-xl p-3 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+      </div>
+
+      <!-- 底部浮動操作列 -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-md flex flex-wrap items-center justify-between gap-3 sticky bottom-4 z-20">
+        <div class="flex items-center gap-2">
+          <button id="btnResetPeriod" type="button" class="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors">
+            清空本節
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="btnExportDailyWord" type="button" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-1.5">
+            <span>📄</span>
+            <span>匯出當日 Word 報表</span>
+          </button>
+          <button id="btnSaveDay" type="button" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center gap-2">
+            <span>💾</span>
+            <span>儲存/更新此日完整紀錄</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. 統計與熱區分析視圖 (view-analytics) -->
+    <!-- ========================================== -->
+    <section id="view-analytics" class="view-section hidden space-y-5">
+      <!-- 篩選列 -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">目標個案</label>
+            <select id="analyticsCaseSelect" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-800">
+              <!-- 動態載入 -->
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">時間範圍</label>
+            <select id="analyticsRangeSelect" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-800">
+              <option value="today">今日觀察 (當日)</option>
+              <option value="week" selected>本週累積 (當週)</option>
+              <option value="all">長期全部累計 (All-time)</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="btnExportWeeklyWord" type="button" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2">
+          <span>📊</span>
+          <span>匯出此區間分析 Word 報告</span>
+        </button>
+      </div>
+
+      <!-- 四大核心指標卡片 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-xs font-bold text-slate-600">觀察天數</span>
+          <p id="summaryTotalDays" class="text-2xl font-black text-slate-900 mt-1">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-xs font-bold text-slate-600">累計行為總次數</span>
+          <p id="summaryTotalBehaviors" class="text-2xl font-black text-blue-600 mt-1">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-xs font-bold text-slate-600">最主要出現行為</span>
+          <p id="summaryTopBehavior" class="text-xl font-black text-rose-600 mt-1 truncate">無</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-xs font-bold text-slate-600">行為最密集時段</span>
+          <p id="summaryTopPeriod" class="text-xl font-black text-amber-600 mt-1 truncate">無</p>
+        </div>
+      </div>
+
+      <!-- 客觀自然語言結論框 -->
+      <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-2xl">
+        <h4 class="text-xs font-black text-blue-900 uppercase tracking-wider mb-1">行為趨勢與情境脈絡客觀結論</h4>
+        <div id="insightTextBox" class="text-sm text-blue-950 font-medium">
+          分析計算中...
+        </div>
+      </div>
+
+      <!-- 圖表區塊 (排行長條圖 + 時段趨勢圖) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <h3 class="font-bold text-slate-900 text-sm mb-3">各行為類別發生次數排行 (哪項行為為多)</h3>
+          <div class="h-64">
+            <canvas id="behaviorRankingChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <h3 class="font-bold text-slate-900 text-sm mb-3">時段分佈曲線 (集中在何時)</h3>
+          <div class="h-64">
+            <canvas id="periodTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 時段 × 行為代號 交叉分佈熱區表 (Heatmap) -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-slate-900 text-sm">時段 × 行為代號 交叉分佈熱區矩陣 (Heatmap)</h3>
+          <span class="text-xs text-slate-600">紅色深代表行為頻率高</span>
+        </div>
+        <div id="heatmapContainer" class="overflow-x-auto">
+          <!-- 熱區表格 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. 歷史紀錄與更新視圖 (view-history) -->
+    <!-- ========================================== -->
+    <section id="view-history" class="view-section hidden space-y-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 class="font-black text-slate-900 text-base">歷史觀察紀錄清單</h2>
+          <p class="text-xs text-slate-600">點擊「載入更新」可回溯編輯任何日期的資料並覆蓋同步</p>
+        </div>
+        <button id="btnSyncAll" type="button" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+          ☁️ 立即同步全部至 Google 試算表
+        </button>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
+                <th class="p-3">日期</th>
+                <th class="p-3">個案代號</th>
+                <th class="p-3">用藥時間</th>
+                <th class="p-3">行為總次數</th>
+                <th class="p-3">雲端同步狀態</th>
+                <th class="p-3">操作</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- 動態填入 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. 設定與雲端生態整合 (view-settings) -->
+    <!-- ========================================== -->
+    <section id="view-settings" class="view-section hidden space-y-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div>
+          <h2 class="font-black text-slate-900 text-base">Google 試算表與生態系整合設定</h2>
+          <p class="text-xs text-slate-600 mt-1">串接您個人的 Google Apps Script Web App，所有紀錄自動備份與統計至您的 Google 雲端硬碟。</p>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-700 block">Google Apps Script Web App 網址 (URL)</label>
+          <div class="flex gap-2">
+            <input type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500">
+            <button id="btnSaveApiUrl" type="button" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors">
+              儲存網址
+            </button>
+            <button id="btnTestApi" type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors border border-slate-300">
+              連線測試
+            </button>
+          </div>
+          <div id="apiTestResult"></div>
+        </div>
+
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1.5 leading-relaxed">
+          <p class="font-bold text-slate-800">📌 5 分鐘快速架設步驟：</p>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>在您的 Google Drive 建立一個新的 Google 試算表。</li>
+            <li>點擊上方選單「擴充功能」 ➔ 「Apps Script」。</li>
+            <li>將專案中 <code class="bg-slate-200 px-1 rounded">google-apps-script/Code.gs</code> 的程式碼貼入。</li>
+            <li>點擊右上角「部署」 ➔ 「新建部署」 ➔ 選擇「網頁應用程式 (Web App)」。</li>
+            <li>存取權限設為「所有人 (Anyone)」，複製生成的網址並貼至上方輸入框即完成！</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 引入模組腳本 -->
+  <script src="js/case-manager.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/docx-export.js"></script>
+  <script src="js/google-sync.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

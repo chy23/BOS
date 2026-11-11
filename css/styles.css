@@ -1,0 +1,47 @@
+/* 平板速記專用樣式 */
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-app: #f8fafc;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  background-color: var(--bg-app);
+  color: #1e293b;
+}
+
+/* 輸入框允許選取與游標 */
+input, textarea, select {
+  user-select: text;
+}
+
+/* 隱藏滾動條但保持可滾動 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 觸控微動畫 */
+.behavior-card {
+  transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.behavior-card:active {
+  transform: scale(0.985);
+}
+
+/* 脈動指示燈 */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); }
+}
+
+.dot-pulse {
+  animation: pulse-dot 2s infinite ease-in-out;
+}

@@ -12,10 +12,20 @@ document.addEventListener('DOMContentLoaded', () => {
     { code: '！', name: '未舉手發言、搶話', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600' }
   ];
 
-  const PERIODS = [
-    '早自習', '第一節', '第二節', '第三節', '第四節',
-    '中午', '第五節', '第六節', '第七節'
+  // 依據學校課表作息時間配置
+  const SCHEDULE = [
+    { id: 0, name: '早自習', timeStr: '08:00~08:35', desc: '晨間活動 (08:00~08:15) / 導師時間 (08:15~08:35)', startMin: 8 * 60, endMin: 8 * 60 + 35, spanMin: [0, 8 * 60 + 39] },
+    { id: 1, name: '第一節', timeStr: '08:40~09:20', desc: '第 1 節課 (下課 09:20~09:30)', startMin: 8 * 60 + 40, endMin: 9 * 60 + 20, spanMin: [8 * 60 + 40, 9 * 60 + 25] },
+    { id: 2, name: '第二節', timeStr: '09:30~10:10', desc: '第 2 節課 (大下課 10:10~10:30)', startMin: 9 * 60 + 30, endMin: 10 * 60 + 10, spanMin: [9 * 60 + 26, 10 * 60 + 20] },
+    { id: 3, name: '第三節', timeStr: '10:30~11:10', desc: '第 3 節課 (下課 11:10~11:20)', startMin: 10 * 60 + 30, endMin: 11 * 60 + 10, spanMin: [10 * 60 + 21, 11 * 60 + 15] },
+    { id: 4, name: '第四節', timeStr: '11:20~12:00', desc: '第 4 節課', startMin: 11 * 60 + 20, endMin: 12 * 60, spanMin: [11 * 60 + 16, 12 * 60] },
+    { id: 5, name: '中午', timeStr: '12:00~13:10', desc: '午餐時間 (12:00~12:40) / 午休 (12:40~13:10)', startMin: 12 * 60, endMin: 13 * 60 + 10, spanMin: [12 * 60 + 1, 13 * 60 + 15] },
+    { id: 6, name: '第五節', timeStr: '13:20~14:00', desc: '第 5 節課 (下課 14:00~14:10)', startMin: 13 * 60 + 20, endMin: 14 * 60, spanMin: [13 * 60 + 16, 14 * 60 + 5] },
+    { id: 7, name: '第六節', timeStr: '14:10~14:50', desc: '第 6 節課 (下課 14:50~15:10)', startMin: 14 * 60 + 10, endMin: 14 * 60 + 50, spanMin: [14 * 60 + 6, 15 * 60 + 5] },
+    { id: 8, name: '第七節', timeStr: '15:10~15:50', desc: '第 7 節課 / 放學 (15:50~16:00)', startMin: 15 * 60 + 10, endMin: 15 * 60 + 50, spanMin: [15 * 60 + 6, 24 * 60] }
   ];
+
+  const PERIODS = SCHEDULE.map(s => s.name);
 
   const COMMON_CONTEXT_TAGS = [
     '教師單向講課', '學生個別書寫', '分組討論合作',
@@ -44,6 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
     editModeBadge: document.getElementById('editModeBadge'),
     syncBadge: document.getElementById('syncBadge'),
     
+    // 即時課表排程
+    liveClockDisplay: document.getElementById('liveClockDisplay'),
+    liveScheduleStatus: document.getElementById('liveScheduleStatus'),
+    autoTimeJumpCheckbox: document.getElementById('autoTimeJumpCheckbox'),
+    btnJumpToCurrentPeriod: document.getElementById('btnJumpToCurrentPeriod'),
+
     // 頁籤切換
     navTabs: document.querySelectorAll('.nav-tab'),
     viewSections: document.querySelectorAll('.view-section'),
@@ -87,11 +103,54 @@ document.addEventListener('DOMContentLoaded', () => {
     apiTestResult: document.getElementById('apiTestResult')
   };
 
+  // ===================== 課表時間排程演算法 =====================
+  function getCurrentScheduleInfo() {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let matchedIndex = 0;
+    for (let i = 0; i < SCHEDULE.length; i++) {
+      const s = SCHEDULE[i];
+      if (currentMinutes >= s.spanMin[0] && currentMinutes <= s.spanMin[1]) {
+        matchedIndex = i;
+        break;
+      }
+    }
+
+    const curItem = SCHEDULE[matchedIndex];
+    let statusText = '';
+    let isClassTime = false;
+
+    if (currentMinutes >= curItem.startMin && currentMinutes <= curItem.endMin) {
+      statusText = `上課中：${curItem.name} (${curItem.timeStr})`;
+      isClassTime = true;
+    } else if (currentMinutes < 8 * 60) {
+      statusText = `早自習預備中 (晨間活動 08:00 開始)`;
+    } else if (currentMinutes > 15 * 60 + 50) {
+      statusText = `已放學 (可進行課後彙整統計)`;
+    } else {
+      statusText = `下課/轉銜休息中 (所屬：${curItem.name})`;
+    }
+
+    return {
+      index: matchedIndex,
+      schedule: curItem,
+      timeString: timeString,
+      statusText: statusText,
+      isClassTime: isClassTime
+    };
+  }
+
   // ===================== 初始化函式 =====================
   function init() {
     renderCaseOptions();
     dom.dateInput.value = currentDate;
     
+    // 依據目前時間自動計算課堂節次
+    const currentSched = getCurrentScheduleInfo();
+    currentPeriodIndex = currentSched.index;
+
     renderPeriodTabs();
     renderBehaviorCards();
     renderContextTags();
@@ -101,6 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     bindEvents();
     updateSyncStatusBadge();
+
+    // 啟動課表即時時鐘與跳轉監聽
+    startScheduleTimer();
   }
 
   function createEmptyDayRecord(caseId, date) {
@@ -174,18 +236,46 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===================== 渲染節次與按鈕 =====================
   function renderPeriodTabs() {
     dom.periodTabsContainer.innerHTML = '';
-    PERIODS.forEach((periodName, idx) => {
+    const currentSched = getCurrentScheduleInfo();
+    const isToday = (dom.dateInput.value === new Date().toISOString().split('T')[0]);
+
+    SCHEDULE.forEach((schedItem, idx) => {
+      const isSelected = (idx === currentPeriodIndex);
+      const isNowLive = (idx === currentSched.index && isToday);
+
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `period-tab px-4 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-1.5 ${
-        idx === currentPeriodIndex
-          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-105'
-          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+      btn.className = `period-tab px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap flex flex-col items-start gap-1 border select-none ${
+        isSelected
+          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 scale-[1.03]'
+          : isNowLive
+          ? 'bg-emerald-50 text-emerald-950 border-emerald-400 hover:bg-emerald-100 ring-2 ring-emerald-300'
+          : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
       }`;
       
-      btn.innerHTML = `<span>${periodName}</span><span id="tabBadge_${idx}" class="text-xs px-1.5 py-0.5 rounded-full ${
-        idx === currentPeriodIndex ? 'bg-blue-800 text-white' : 'bg-slate-300 text-slate-700'
-      }">0</span>`;
+      const badgeClass = isSelected
+        ? 'bg-blue-800 text-white'
+        : isNowLive
+        ? 'bg-emerald-600 text-white'
+        : 'bg-slate-300 text-slate-700';
+
+      const liveIndicator = isNowLive
+        ? `<span class="inline-flex items-center gap-1 text-[10px] font-black ${isSelected ? 'text-emerald-200' : 'text-emerald-700'}">
+             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+             現在課堂
+           </span>`
+        : '';
+
+      btn.innerHTML = `
+        <div class="flex items-center justify-between w-full gap-2">
+          <span class="text-xs font-black tracking-tight">${schedItem.name}</span>
+          <div class="flex items-center gap-1">
+            ${liveIndicator}
+            <span id="tabBadge_${idx}" class="text-[11px] px-1.5 py-0.5 rounded-full font-bold ${badgeClass}">0</span>
+          </div>
+        </div>
+        <span class="text-[10px] font-medium opacity-80">${schedItem.timeStr}</span>
+      `;
 
       btn.addEventListener('click', () => {
         saveCurrentPeriodInputs();
@@ -273,7 +363,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function refreshPeriodUI() {
     const period = dayRecord.periods[currentPeriodIndex];
-    dom.currentPeriodTitle.textContent = `${period.name} 行為觀察`;
+    const schedItem = SCHEDULE[currentPeriodIndex];
+    dom.currentPeriodTitle.innerHTML = `
+      <span>${period.name} 行為觀察</span>
+      <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+        🕒 ${schedItem.timeStr}（${schedItem.desc}）
+      </span>
+    `;
 
     // 更新各行為計數器數字
     BEHAVIORS.forEach(b => {
@@ -744,17 +840,66 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Google 試算表 Web App 網址已儲存！', 'success');
     });
 
-    dom.btnTestApi.addEventListener('click', async () => {
-      dom.apiTestResult.textContent = '連線測試中...';
-      try {
-        const res = await window.GoogleSync.testConnection(dom.apiUrlInput.value);
-        dom.apiTestResult.textContent = `✅ 連線成功！伺服器回應：${JSON.stringify(res)}`;
-        dom.apiTestResult.className = 'text-xs text-emerald-600 font-semibold mt-2';
-      } catch (err) {
-        dom.apiTestResult.textContent = `❌ 連線失敗：${err.message}`;
-        dom.apiTestResult.className = 'text-xs text-rose-600 font-semibold mt-2';
+    // 課表跳轉與定時器控制
+    if (dom.btnJumpToCurrentPeriod) {
+      dom.btnJumpToCurrentPeriod.addEventListener('click', () => {
+        const sched = getCurrentScheduleInfo();
+        saveCurrentPeriodInputs();
+        currentPeriodIndex = sched.index;
+        renderPeriodTabs();
+        refreshPeriodUI();
+        showToast(`⚡️ 已切換至當前課堂：【${sched.schedule.name}】(${sched.schedule.timeStr})`, 'info');
+      });
+    }
+
+    if (dom.autoTimeJumpCheckbox) {
+      dom.autoTimeJumpCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          showToast('已開啟「自動依課表跳轉」', 'info');
+          const sched = getCurrentScheduleInfo();
+          if (dom.dateInput.value === new Date().toISOString().split('T')[0]) {
+            currentPeriodIndex = sched.index;
+            renderPeriodTabs();
+            refreshPeriodUI();
+          }
+        } else {
+          showToast('已暫停自動跳轉，可手動停留在任何節次', 'info');
+        }
+      });
+    }
+  }
+
+  // ===================== 課表即時監聽與自動跳轉 =====================
+  function startScheduleTimer() {
+    function tick() {
+      const sched = getCurrentScheduleInfo();
+      if (dom.liveClockDisplay) {
+        dom.liveClockDisplay.textContent = sched.timeString;
       }
-    });
+      if (dom.liveScheduleStatus) {
+        dom.liveScheduleStatus.textContent = sched.statusText;
+        if (sched.isClassTime) {
+          dom.liveScheduleStatus.className = 'text-xs font-black text-emerald-900 bg-emerald-100/90 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs';
+        } else {
+          dom.liveScheduleStatus.className = 'text-xs font-bold text-blue-900 bg-white/90 px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs';
+        }
+      }
+
+      // 若目前選擇的日期是「今天」，且使用者開啟了「自動依課表跳轉」
+      const isToday = (dom.dateInput.value === new Date().toISOString().split('T')[0]);
+      if (isToday && dom.autoTimeJumpCheckbox && dom.autoTimeJumpCheckbox.checked) {
+        if (currentPeriodIndex !== sched.index) {
+          saveCurrentPeriodInputs();
+          currentPeriodIndex = sched.index;
+          renderPeriodTabs();
+          refreshPeriodUI();
+          showToast(`⏰ 課表時間進入【${sched.schedule.name}】(${sched.schedule.timeStr})，已自動切換！`, 'info');
+        }
+      }
+    }
+
+    tick();
+    setInterval(tick, 1000);
   }
 
   // 啟動

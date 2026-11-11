@@ -125,8 +125,36 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCloseCaseModal: document.getElementById('btnCloseCaseModal'),
     btnModalClose: document.getElementById('btnModalClose'),
     btnModalAddNewCase: document.getElementById('btnModalAddNewCase'),
-    caseModalList: document.getElementById('caseModalList')
+    caseModalList: document.getElementById('caseModalList'),
+
+    // 系統版本與更新紀錄彈窗
+    changelogModal: document.getElementById('changelogModal'),
+    btnCloseChangelogModal: document.getElementById('btnCloseChangelogModal'),
+    btnModalCloseChangelog: document.getElementById('btnModalCloseChangelog'),
+    btnOpenChangelog: document.getElementById('btnOpenChangelog'),
+    btnVersionBadge: document.getElementById('btnVersionBadge'),
+    btnOpenChangelogModalFromSettings: document.getElementById('btnOpenChangelogModalFromSettings'),
+    btnFooterChangelog: document.getElementById('btnFooterChangelog'),
+    btnFooterSecurity: document.getElementById('btnFooterSecurity'),
+    changelogNewDot: document.getElementById('changelogNewDot')
   };
+
+  // ===================== 更新紀錄彈窗 (Changelog) =====================
+  function openChangelogModal() {
+    if (dom.changelogModal) {
+      dom.changelogModal.classList.remove('hidden');
+      localStorage.setItem('bos_viewed_v2_5', 'true');
+      if (dom.changelogNewDot) {
+        dom.changelogNewDot.classList.add('hidden');
+      }
+    }
+  }
+
+  function closeChangelogModal() {
+    if (dom.changelogModal) {
+      dom.changelogModal.classList.add('hidden');
+    }
+  }
 
   // ===================== 初始化 =====================
   function init() {
@@ -158,6 +186,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 載入設定頁中的後端程式碼預覽
     loadBackendCodeToPreview();
+
+    // 更新紀錄小紅點提示
+    if (localStorage.getItem('bos_viewed_v2_5') && dom.changelogNewDot) {
+      dom.changelogNewDot.classList.add('hidden');
+    }
   }
 
   function getActiveObserver() {
@@ -1053,6 +1086,29 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.btnCloseCaseModal.addEventListener('click', closeCaseManagerModal);
     dom.btnModalClose.addEventListener('click', closeCaseManagerModal);
     dom.btnModalAddNewCase.addEventListener('click', handleCreateNewCase);
+
+    // 系統版本更新紀錄彈窗事件
+    if (dom.btnOpenChangelog) dom.btnOpenChangelog.addEventListener('click', openChangelogModal);
+    if (dom.btnVersionBadge) dom.btnVersionBadge.addEventListener('click', openChangelogModal);
+    if (dom.btnOpenChangelogModalFromSettings) dom.btnOpenChangelogModalFromSettings.addEventListener('click', openChangelogModal);
+    if (dom.btnFooterChangelog) dom.btnFooterChangelog.addEventListener('click', openChangelogModal);
+    if (dom.btnCloseChangelogModal) dom.btnCloseChangelogModal.addEventListener('click', closeChangelogModal);
+    if (dom.btnModalCloseChangelog) dom.btnModalCloseChangelog.addEventListener('click', closeChangelogModal);
+
+    // 點擊彈窗外陰影關閉
+    if (dom.changelogModal) {
+      dom.changelogModal.addEventListener('click', (e) => {
+        if (e.target === dom.changelogModal) closeChangelogModal();
+      });
+    }
+
+    // 頁尾資安標籤點擊：快速切換至設定頁查看資安詳情
+    if (dom.btnFooterSecurity) {
+      dom.btnFooterSecurity.addEventListener('click', () => {
+        switchTab('view-settings');
+        showToast('🛡️ BOS 系統已通過全項特教個資去識別化與資安防護稽核！', 'success');
+      });
+    }
 
     // 雲端拉取
     dom.btnFetchCloud.addEventListener('click', handleFetchCloud);

@@ -49,6 +49,17 @@ function doPost(e) {
  * 新增或更新紀錄 (支援單節更新或全日合併，避免多位老師相互覆蓋)
  */
 function handleUpsertRecord(payload) {
+  // 資安檢查 1：嚴格驗證個案代號與日期格式
+  const caseId = String(payload.caseId || '').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
+  const date = String(payload.date || '').trim();
+
+  if (caseId.length !== 3) {
+    return jsonResponse({ status: "error", message: "無效的個案代號 (必須為3碼英數)" }, 400);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return jsonResponse({ status: "error", message: "無效的日期格式" }, 400);
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const rawSheet = getOrCreateSheet(ss, SHEET_NAME_RAW, [
     "更新時間戳記", "個案代號", "日期", "用藥時間", "身體不適紀錄",
@@ -56,33 +67,29 @@ function handleUpsertRecord(payload) {
     "前事脈絡(A)", "後果反應(C)", "詳細情境備註", "正向行為次數"
   ]);
 
-  const caseId = payload.caseId;
-  const date = payload.date;
-  const medTime = payload.medTime || "未記錄";
-  const discomfort = payload.discomfort || "無特殊狀況";
-  const observer = payload.observer || "課堂教師";
-  const periods = payload.periods || []; // 節次資料陣列
+  const medTime = sanitizeCell(payload.medTime || "未記錄");
+  const discomfort = sanitizeCell(payload.discomfort || "無特殊狀況");
+  const observer = sanitizeCell(payload.observer || "課堂教師");
+  const periods = payload.periods || [];
   const timestamp = new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" });
 
-  // 取得本次要寫入的節次名稱清單 (例如若科任只送第三節，只刪除該節舊紀錄)
   const targetPeriodNames = periods.map(p => p.name);
 
   // 1. 僅刪除「同個案 + 同日期 + 本次有更新的節次」之舊紀錄，保留其他科任老師的節次紀錄
   deleteTargetPeriodRows(rawSheet, caseId, date, targetPeriodNames);
 
-  // 2. 插入新的列資料
+  // 2. 插入新的列資料 (經防公式注入清理)
   const rowsToInsert = [];
   periods.forEach(function(period) {
-    const periodName = period.name;
-    const periodObserver = period.observer || observer;
-    const antecedentTags = (period.antecedentTags || []).join(", ");
-    const consequenceTags = (period.consequenceTags || []).join(", ");
-    const contextNote = period.contextNote || "";
+    const periodName = sanitizeCell(period.name);
+    const periodObserver = sanitizeCell(period.observer || observer);
+    const antecedentTags = sanitizeCell((period.antecedentTags || []).join(", "));
+    const consequenceTags = sanitizeCell((period.consequenceTags || []).join(", "));
+    const contextNote = sanitizeCell(period.contextNote || "");
     const positiveCount = Number(period.positiveCount || 0);
     const behaviors = period.behaviors || [];
 
     if (behaviors.length === 0 || period.isV) {
-      // 標記為 V (無干擾常態)
       rowsToInsert.push([
         timestamp, caseId, date, medTime, discomfort,
         periodName, periodObserver, "V", "常態穩定/無干擾", 0,
@@ -93,7 +100,7 @@ function handleUpsertRecord(payload) {
         if (b.count > 0 || behaviors.length === 1) {
           rowsToInsert.push([
             timestamp, caseId, date, medTime, discomfort,
-            periodName, periodObserver, b.code, b.name, Number(b.count || 0),
+            periodName, periodObserver, sanitizeCell(b.code), sanitizeCell(b.name), Number(b.count || 0),
             antecedentTags, consequenceTags, contextNote, positiveCount
           ]);
         }
@@ -118,6 +125,20 @@ function handleUpsertRecord(payload) {
     rowsCount: rowsToInsert.length,
     updatedAt: timestamp
   });
+}
+
+/**
+ * 資安防護：防試算表公式注入 (Spreadsheet Formula Injection / CWE-1236)
+ * 若字串以 '=', '+', '-', '@' 開頭，強制加上單引號轉義
+ */
+function sanitizeCell(val) {
+  if (typeof val === 'string') {
+    val = val.trim();
+    if (/^[=+\-@]/.test(val)) {
+      return "'" + val;
+    }
+  }
+  return val;
 }
 
 /**

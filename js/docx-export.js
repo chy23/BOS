@@ -3,37 +3,50 @@
  * 升級包含：多師觀察者註記、A-B-C 行為脈絡、正向良好行為、ADHD 三面向評估摘要
  */
 class DocxExport {
+  /**
+   * 資安轉義防護：防止 HTML Injection / XSS
+   */
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   exportDailyWord(record, summary) {
     if (!record) {
       alert('請先選擇或儲存當日紀錄！');
       return;
     }
 
-    const caseId = record.caseId || '未指定';
-    const date = record.date || new Date().toISOString().split('T')[0];
-    const medTime = record.medTime || '無 / 未記錄';
-    const discomfort = record.discomfort || '無特殊異常';
+    const caseId = this.escapeHtml(record.caseId || '未指定');
+    const date = this.escapeHtml(record.date || new Date().toISOString().split('T')[0]);
+    const medTime = this.escapeHtml(record.medTime || '無 / 未記錄');
+    const discomfort = this.escapeHtml(record.discomfort || '無特殊異常');
 
     let rowsHtml = '';
     (record.periods || []).forEach(p => {
       let behaviorDesc = [];
       if (p.behaviors && p.behaviors.length > 0) {
-        behaviorDesc = p.behaviors.filter(b => b.count > 0).map(b => `<b>${b.code}</b> ${b.name} (${b.count}次)`);
+        behaviorDesc = p.behaviors.filter(b => b.count > 0).map(b => `<b>${this.escapeHtml(b.code)}</b> ${this.escapeHtml(b.name)} (${b.count}次)`);
       }
       if (behaviorDesc.length === 0) {
         behaviorDesc = ['<i>V (常態穩定/無干擾)</i>'];
       }
 
-      const observerTag = p.observer ? `<span class="teacher-tag">👩‍🏫 ${p.observer}</span>` : '<span class="teacher-tag">課堂教師</span>';
+      const observerTag = p.observer ? `<span class="teacher-tag">👩‍🏫 ${this.escapeHtml(p.observer)}</span>` : '<span class="teacher-tag">課堂教師</span>';
       const posTag = (p.positiveCount > 0) ? `<br><b style="color:#D97706;">★ 正向良好行為：${p.positiveCount} 次</b>` : '';
 
       const aTags = (p.antecedentTags && p.antecedentTags.length > 0)
-        ? `<div><small style="color:#2563EB;">【前事 A】</small> ${p.antecedentTags.map(t => `<span class="tag">${t}</span>`).join(' ')}</div>`
+        ? `<div><small style="color:#2563EB;">【前事 A】</small> ${p.antecedentTags.map(t => `<span class="tag">${this.escapeHtml(t)}</span>`).join(' ')}</div>`
         : '';
       const cTags = (p.consequenceTags && p.consequenceTags.length > 0)
-        ? `<div><small style="color:#D97706;">【後果 C】</small> ${p.consequenceTags.map(t => `<span class="tag-c">${t}</span>`).join(' ')}</div>`
+        ? `<div><small style="color:#D97706;">【後果 C】</small> ${p.consequenceTags.map(t => `<span class="tag-c">${this.escapeHtml(t)}</span>`).join(' ')}</div>`
         : '';
-      const note = p.contextNote ? `<div style="color:#475569; font-size:9.5pt; margin-top:2pt;">備註：${p.contextNote}</div>` : '';
+      const note = p.contextNote ? `<div style="color:#475569; font-size:9.5pt; margin-top:2pt;">備註：${this.escapeHtml(p.contextNote)}</div>` : '';
 
       const contextHtml = (aTags || cTags || note) ? `${aTags}${cTags}${note}` : '一般課堂常態';
 
@@ -152,6 +165,9 @@ class DocxExport {
       alert('無有效分析數據！');
       return;
     }
+
+    const safeCaseId = this.escapeHtml(caseId || '未指定');
+    const safeFilterDesc = this.escapeHtml(filterDesc || '觀察區間');
 
     const periods = ['早自習', '第一節', '第二節', '第三節', '第四節', '中午', '第五節', '第六節', '第七節'];
     const columns = [

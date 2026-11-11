@@ -26,6 +26,9 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-base font-black text-[#1d1d1f] tracking-tight">BOS 行為觀察系統</h1>
+            <button id="btnVersionBadge" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 transition-all cursor-pointer shadow-2xs" title="查看系統版本更新紀錄">
+              <span>v2.5.0</span>
+            </button>
             <span id="editModeBadge" class="hidden text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300">
               ✏️ 編輯模式
             </span>
@@ -81,7 +84,7 @@
         </button>
       </nav>
 
-      <!-- 雲端同步狀態標籤與刷新 -->
+      <!-- 雲端同步狀態標籤與刷新 + 系統更新紀錄 -->
       <div class="flex items-center gap-1.5">
         <button id="btnFetchCloud" type="button" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold border border-blue-200 transition-colors" title="拉取其他科任老師剛記錄的最新資料">
           🔄 載入最新
@@ -89,6 +92,10 @@
         <div id="syncBadge" class="text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700">
           已同步
         </div>
+        <button id="btnOpenChangelog" type="button" class="px-2.5 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 border border-amber-200/90 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1 active:scale-95 touch-target-44" title="查看系統更新紀錄與版本歷程">
+          <span>✨</span><span>更新紀錄</span>
+          <span id="changelogNewDot" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+        </button>
       </div>
     </div>
   </header>
@@ -412,13 +419,90 @@
         <!-- 資安無風險保證標章 -->
         <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
           <p class="font-extrabold flex items-center gap-1.5 text-sm text-emerald-950">
-            <span>🛡️</span><span>資安與個資安全無風險驗證通過 (Security Verified)</span>
+            <span>🛡️</span><span>資安與個資安全無風險驗證通過 (Security & Privacy Verified)</span>
           </p>
           <ul class="list-disc list-inside space-y-0.5 text-emerald-800">
             <li><b>100% 原始資料主權</b>：紀錄直通您個人的 Google 試算表，不經過任何第三方雲端或商業伺服器。</li>
             <li><b>嚴格去識別化</b>：傳輸中一律僅使用 3 碼亂碼代號，絕不記錄學生真名、身分證號或學號。</li>
             <li><b>全程 HTTPS 加密</b>：採用 Google TLS 1.3 高強度傳輸通道，杜絕校園 Wi-Fi 封包側錄。</li>
+            <li><b>試算表防公式注入 (CWE-1236)</b>：自動轉義 <code>=+ - @</code> 字元，封堵試算表惡意巨集攻擊。</li>
+            <li><b>報表防腳本注入 (XSS)</b>：匯出 Word 之情境備註文字 100% 完成 HTML 實體轉義。</li>
           </ul>
+        </div>
+
+        <!-- 系統版本與更新紀錄設置 (Release Notes & Changelog Settings) -->
+        <div class="p-5 bg-gradient-to-br from-amber-50/70 to-orange-50/40 rounded-2xl border border-amber-200/90 space-y-4">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
+                <span>✨</span><span>系統更新紀錄設置 (Release Notes & Updates)</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-amber-200/90 text-amber-900">v2.5.0 當前最新</span>
+              </h3>
+              <p class="text-xs text-slate-600 mt-1">完整記錄本系統自紙本數位化、實體課表連動、A-B-C 脈絡、多師協同至資安防護與 Apple HIG 介面演進歷程。</p>
+            </div>
+            <button id="btnOpenChangelogModalFromSettings" type="button" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95">
+              <span>📋</span><span>開啟詳細更新彈窗</span>
+            </button>
+          </div>
+
+          <!-- 快速摘要更新時間軸 -->
+          <div class="space-y-2.5 pt-1">
+            <!-- v2.5.0 -->
+            <div class="bg-white p-3.5 rounded-xl border border-amber-200/70 shadow-2xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-xs text-slate-900 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>v2.5.0 旗艦更新（資安加固 · Apple HIG 觸控 · 文字化熱區 · 多師協同）</span>
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">2026-11-11</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                全卡片點擊記次（空白處即 +1）、移除冗餘圖示、60fps CSS 仿 GIF 微動畫、A-B-C 前因後果脈絡、ADHD 三面向評估、交叉熱區中文文字化、Word 報表 HTML 防注入、試算表公式注入（CWE-1236）防禦。
+              </p>
+            </div>
+
+            <!-- v2.0.0 -->
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/70 shadow-2xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <span>v2.0.0 實體課表智慧連動與亂碼個案</span>
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">2026-11-11</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                依據學校實體作息課表（早自習 08:00、第 1~7 節、中午 12:00 等）即時鐘聲跳轉節次、3 碼英數隨機亂碼個案生成（去識別化保護）、交叉熱區矩陣基礎版。
+              </p>
+            </div>
+
+            <!-- v1.5.0 -->
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/70 shadow-2xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span>v1.5.0 Google 試算表生態直連與離線快取</span>
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">2026-11-11</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                整合 Google Apps Script Web App 零伺服器架構、本地 LocalStorage 離線優先快取與斷網防丟。
+              </p>
+            </div>
+
+            <!-- v1.0.0 -->
+            <div class="bg-white/80 p-3 rounded-xl border border-slate-200/70 shadow-2xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span>v1.0.0 課堂行為速記紙本數位化初始版本</span>
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">2026-11-10</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                完整還原紙本 7 種行為代碼（○、+、↑、～、×、！、V）、平板單手記次、Word 輔導會報報表一鍵匯出。
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- 雲端程式碼一鍵複製區塊 -->
@@ -464,6 +548,136 @@
           完成關閉
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 頁尾宣告與快捷連結 (Footer) -->
+  <!-- ========================================== -->
+  <footer class="mt-auto py-5 border-t border-slate-200/80 bg-white/70 backdrop-blur-sm text-center text-xs text-slate-500 space-y-1.5">
+    <div class="flex items-center justify-center gap-3 sm:gap-6 flex-wrap font-bold text-slate-600">
+      <button id="btnFooterChangelog" type="button" class="hover:text-amber-600 transition-colors flex items-center gap-1 cursor-pointer">
+        <span>✨</span><span>版本更新紀錄 (v2.5.0)</span>
+      </button>
+      <span>·</span>
+      <a href="https://github.com/chy23/BOS" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 transition-colors flex items-center gap-1">
+        <span>🐙</span><span>GitHub 原始碼庫</span>
+      </a>
+      <span>·</span>
+      <button id="btnFooterSecurity" type="button" class="hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
+        <span>🛡️</span><span>資安與個資稽核通過</span>
+      </button>
+    </div>
+    <p class="text-[11px] text-slate-400">BOS 行為觀察速記系統 · 國中小課堂特教輔導與多師協同整合方案 · 全程去識別化保護學生隱私</p>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- 系統版本更新紀錄彈窗 Modal (Changelog Modal) -->
+  <!-- ========================================== -->
+  <div id="changelogModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50/70 via-white to-blue-50/40">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-lg shadow-sm">
+            ✨
+          </div>
+          <div>
+            <h3 class="font-black text-slate-900 text-base">BOS 系統更新紀錄與版本歷程</h3>
+            <p class="text-[11px] text-slate-500 font-medium">記錄每次迭代、特教現場回饋落地、資安加固與體驗優化細節</p>
+          </div>
+        </div>
+        <button id="btnCloseChangelogModal" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors" title="關閉">
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body (滾動時間軸) -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-slate-800">
+
+        <!-- v2.5.0 -->
+        <div class="relative pl-6 border-l-2 border-emerald-500 space-y-2">
+          <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white shadow-xs"></div>
+          <div class="flex items-center justify-between flex-wrap gap-1">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
+              v2.5.0 當前最新版
+            </span>
+            <span class="text-xs text-slate-400 font-mono">2026-11-11</span>
+          </div>
+          <h4 class="font-black text-slate-900 text-sm">資安與個資全面防護 · Apple HIG 觸控升級 · 文字化熱區 · 多師協同</h4>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><b>資安防護加固</b>：完成資安稽核，後端 Google Apps Script 實裝 CWE-1236 試算表公式注入防禦（<code>sanitizeCell</code>）與個案代碼格式嚴格驗證；前端 Word 匯出加入 HTML 實體轉義（防 XSS）。</li>
+            <li><b>Apple HIG / Apple Design 觸控體驗</b>：卡片全空白區域支援點選即記次（+1），符合 44×44pt 最小觸控目標規範與彈簧按壓反饋。</li>
+            <li><b>視覺簡化與微動態圖示</b>：依需求移除冗餘之方框小圖示，右下角優雅保留半透明 60fps CSS 仿 GIF 微動畫（鉛筆搖動、發呆雲朵、搜尋放大鏡、擺腿、對話波紋、大聲公）。</li>
+            <li><b>熱區與報表繁中文字化</b>：統計矩陣與 Word 報表全面採用「玩文具雜物、放空發呆、尋找遺失物、扭動身體、干擾他人、未舉手搶話、正向好行為」等完整中文語意，不再顯示單一符號。</li>
+            <li><b>A-B-C 行為脈絡與 ADHD 三面向</b>：整合前置情境（A）、具體行為（B）、後果反饋（C）與正向行為統計，對齊特教臨床診斷維度。</li>
+            <li><b>多師協同機制</b>：支援不同科任老師身份標記，細粒度節次級（Period-level）合併更新，防止互相覆蓋。</li>
+            <li><b>個案刪除功能</b>：支援完整刪除已結案之代號，並提供一鍵抹除本機與雲端歷史紀錄之選項。</li>
+          </ul>
+        </div>
+
+        <!-- v2.0.0 -->
+        <div class="relative pl-6 border-l-2 border-blue-400 space-y-2">
+          <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white shadow-xs"></div>
+          <div class="flex items-center justify-between flex-wrap gap-1">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-800">
+              v2.0.0
+            </span>
+            <span class="text-xs text-slate-400 font-mono">2026-11-11</span>
+          </div>
+          <h4 class="font-black text-slate-900 text-sm">實體作息課表連動 · 3 碼亂碼個案去識別化</h4>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><b>精確作息鐘聲連動</b>：比對學校實體課表（早自習 08:00~08:35、第 1~7 節、中午 12:00~13:10），智慧時鐘即時高亮並自動跳轉至當前進行節次。</li>
+            <li><b>3 碼英數亂碼代號生成</b>：採用 32 碼去混淆字元池隨機生成（如 <code>B7K</code>），符合個資法去識別化標準，兼顧長短期個案追蹤與隱私安全。</li>
+            <li><b>交叉分佈熱區 (Heatmap) 雛形</b>：時段與行為代號二維分佈視覺化。</li>
+          </ul>
+        </div>
+
+        <!-- v1.5.0 -->
+        <div class="relative pl-6 border-l-2 border-slate-300 space-y-2">
+          <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-400 border-4 border-white shadow-xs"></div>
+          <div class="flex items-center justify-between flex-wrap gap-1">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+              v1.5.0
+            </span>
+            <span class="text-xs text-slate-400 font-mono">2026-11-11</span>
+          </div>
+          <h4 class="font-black text-slate-900 text-sm">Google 試算表生態系整合 · 離線優先快取架構</h4>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><b>Google Apps Script Web App 直連</b>：零伺服器成本架構，資料直存使用者個人 Google Drive 試算表，確保資料絕對主權。</li>
+            <li><b>離線優先 (Offline First)</b>：即使校園 Wi-Fi 訊號不穩，也能完整保存在本地端，連線時一鍵批次補同步。</li>
+          </ul>
+        </div>
+
+        <!-- v1.0.0 -->
+        <div class="relative pl-6 border-l-2 border-slate-200 space-y-2">
+          <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-300 border-4 border-white shadow-xs"></div>
+          <div class="flex items-center justify-between flex-wrap gap-1">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+              v1.0.0
+            </span>
+            <span class="text-xs text-slate-400 font-mono">2026-11-10</span>
+          </div>
+          <h4 class="font-black text-slate-900 text-sm">課堂行為速記紙本數位化上線</h4>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><b>紙本無痛數位轉換</b>：忠實還原 7 大課堂行為代碼（○、+、↑、～、×、！、V）。</li>
+            <li><b>Word 輔導會報報表匯出</b>：一鍵生成符合教育行政規範之個別化行為觀察記錄 Word 文件。</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <a href="https://github.com/chy23/BOS" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+          <span>🐙 前往 GitHub 專案庫 (chy23/BOS)</span>
+        </a>
+        <button id="btnModalCloseChangelog" type="button" class="px-5 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-black rounded-xl transition-all shadow-xs active:scale-95">
+          了解關閉
+        </button>
+      </div>
+
     </div>
   </div>
 

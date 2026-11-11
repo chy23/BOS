@@ -27,17 +27,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const PERIODS = SCHEDULE.map(s => s.name);
 
-  // A 前事標籤與 C 後果標籤 (依據特教與 ADHD 指引)
+  // A 前事標籤與 C 後果標籤 (已融合進階模式之臨床高價值誘因與有效處置)
   const ANTECEDENT_TAGS = [
     '教師單向講課', '學生獨立書寫', '分組討論合作',
-    '課堂測驗小考', '收發作業聯絡簿', '上課轉銜鐘響',
-    '同儕主動攀談', '疲憊飢餓/身體不適', '自由活動時間'
+    '長篇閱讀/大量書寫(難度高)', '數學多步驟解題卡關',
+    '廣播/走廊外界感官刺激', '未被點到發言/輪流等待',
+    '突發流程變動/代課老師', '等待發卷/轉銜空檔', '疲憊飢餓/身體不適'
   ];
 
   const CONSEQUENCE_TAGS = [
-    '教師口頭提醒', '手勢眼神示意', '肢體引導回座',
-    '給予讚美/代幣', '同儕起鬨圍觀', '抽離至冷靜角',
-    '課後個別談話', '刻意忽略/暫不處理'
+    '非口語手勢/眼神示意', '個別口頭提示/點名', '調整難度/切分任務步驟',
+    '即時正向回饋/集點讚美', '帶至冷靜角/暫離刺激源', '肢體引導回座',
+    '同儕起鬨圍觀', '暫時忽視/未介入'
   ];
 
   // 狀態管理
@@ -212,6 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
       periods: SCHEDULE.map(s => ({
         name: s.name,
         observer: '',
+        subject: '',
+        activityType: '',
+        intensity: 1,
+        outcome: '',
         isV: false,
         positiveCount: 0,
         behaviors: BEHAVIORS.map(b => ({ code: b.code, name: b.name, count: 0 })),
@@ -595,6 +600,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const period = dayRecord.periods[currentPeriodIndex];
     dom.contextNoteInput.value = period.contextNote || '';
 
+    // 同步基礎模式中引進之進階輕量欄位（科目、型態、強度、成效）
+    const basicSubj = document.getElementById('basicSubjectSelect');
+    const basicAct = document.getElementById('basicActivitySelect');
+    const basicInt = document.getElementById('basicIntensitySelect');
+    const basicOut = document.getElementById('basicOutcomeSelect');
+    if (basicSubj) basicSubj.value = period.subject || '';
+    if (basicAct) basicAct.value = period.activityType || '';
+    if (basicInt) basicInt.value = String(period.intensity || 1);
+    if (basicOut) basicOut.value = period.outcome || '';
+
     // 更新 A 標籤選取外觀
     const aButtons = dom.antecedentTagsContainer.querySelectorAll('.a-tag-btn');
     aButtons.forEach(btn => {
@@ -654,6 +669,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveCurrentPeriodInputs() {
     const period = dayRecord.periods[currentPeriodIndex];
     period.contextNote = dom.contextNoteInput.value.trim();
+    const basicSubj = document.getElementById('basicSubjectSelect');
+    const basicAct = document.getElementById('basicActivitySelect');
+    const basicInt = document.getElementById('basicIntensitySelect');
+    const basicOut = document.getElementById('basicOutcomeSelect');
+    if (basicSubj) period.subject = basicSubj.value;
+    if (basicAct) period.activityType = basicAct.value;
+    if (basicInt) period.intensity = Number(basicInt.value || 1);
+    if (basicOut) period.outcome = basicOut.value;
     period.observer = getActiveObserver();
     dayRecord.medTime = dom.medTimeInput.value.trim();
     dayRecord.discomfort = dom.discomfortInput.value.trim();
@@ -1238,11 +1261,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (detailContainer) {
       detailContainer.innerHTML = CA.ANTECEDENT_DETAILS_ENUM.map(item => {
         const active = advState.antecedent_details === item.detail;
+        const catMeta = CA.getAntecedentCategory(item.category);
         return `
-          <button type="button" data-detail="${item.detail}" data-cat="${item.category}" class="adv-ant-det-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+          <button type="button" data-detail="${item.detail}" data-cat="${item.category}" class="adv-ant-det-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
             active ? 'bg-amber-600 text-white border-amber-700 font-black shadow-xs' : 'bg-white hover:bg-amber-50 text-slate-700 border-slate-300'
           }">
-            ${item.detail}
+            <span class="text-[10px] px-1.5 py-0.2 rounded font-black ${active ? 'bg-amber-800 text-amber-100' : 'bg-amber-100 text-amber-900'}">${catMeta ? catMeta.name : item.category}</span>
+            <span>${item.detail}</span>
           </button>
         `;
       }).join('');
@@ -1780,7 +1805,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnScrollMap) {
       btnScrollMap.addEventListener('click', () => {
         const sec = document.getElementById('clinicalMappingReferenceSection');
-        if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+        if (sec) {
+          sec.open = true;
+          sec.scrollIntoView({ behavior: 'smooth' });
+        }
       });
     }
 
@@ -2062,11 +2090,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const period = dayRecord.periods[currentPeriodIndex];
         period.isV = false;
         period.positiveCount = 0;
+        period.subject = '';
+        period.activityType = '';
+        period.intensity = 1;
+        period.outcome = '';
         period.behaviors.forEach(b => b.count = 0);
         period.antecedentTags = [];
         period.consequenceTags = [];
         period.contextNote = '';
         refreshPeriodUI();
+      }
+    });
+
+    // 基礎模式引進之進階輕量選單即時保存
+    ['basicSubjectSelect', 'basicActivitySelect', 'basicIntensitySelect', 'basicOutcomeSelect'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => {
+          saveCurrentPeriodInputs();
+        });
       }
     });
 

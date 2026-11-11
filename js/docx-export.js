@@ -44,7 +44,14 @@ class DocxExport {
       }
 
       const observerTag = p.observer ? `<span class="teacher-tag">👩‍🏫 ${this.escapeHtml(p.observer)}</span>` : '<span class="teacher-tag">課堂教師</span>';
+      const subjActTag = (p.subject || p.activityType)
+        ? `<div style="margin-top:2pt;"><span class="tag">${this.escapeHtml(p.subject || '')}${p.subject && p.activityType ? ' · ' : ''}${this.escapeHtml(p.activityType || '')}</span></div>`
+        : '';
       const posTag = (p.positiveCount > 0) ? `<br><b style="color:#D97706;">★ 正向良好行為：${p.positiveCount} 次</b>` : '';
+      const intensityMap = { 1: '1-輕度(自我)', 2: '2-中度(鄰近)', 3: '3-重度(全班)' };
+      const intTag = (p.intensity && p.intensity > 1)
+        ? `<br><span style="font-size:9pt; color:#B45309; font-weight:bold;">⚡ 干擾強度：${intensityMap[p.intensity] || p.intensity}</span>`
+        : '';
 
       const aTags = (p.antecedentTags && p.antecedentTags.length > 0)
         ? `<div><small style="color:#2563EB;">【前事 A】</small> ${p.antecedentTags.map(t => `<span class="tag">${this.escapeHtml(t)}</span>`).join(' ')}</div>`
@@ -52,16 +59,19 @@ class DocxExport {
       const cTags = (p.consequenceTags && p.consequenceTags.length > 0)
         ? `<div><small style="color:#D97706;">【後果 C】</small> ${p.consequenceTags.map(t => `<span class="tag-c">${this.escapeHtml(t)}</span>`).join(' ')}</div>`
         : '';
+      const outTag = p.outcome
+        ? `<div><small style="color:#047857;">【處遇成效】</small> <b style="color:#047857; font-size:9.5pt;">${this.escapeHtml(p.outcome)}</b></div>`
+        : '';
       const note = p.contextNote ? `<div style="color:#475569; font-size:9.5pt; margin-top:2pt;">備註：${this.escapeHtml(p.contextNote)}</div>` : '';
 
-      const contextHtml = (aTags || cTags || note) ? `${aTags}${cTags}${note}` : '一般課堂常態';
+      const contextHtml = (aTags || cTags || outTag || note) ? `${aTags}${cTags}${outTag}${note}` : '一般課堂常態';
 
       rowsHtml += `
         <tr>
           <td style="text-align: center; font-weight: bold; background-color: #F8FAFC;">
-            ${this.escapeHtml(p.name)}<br>${observerTag}
+            ${this.escapeHtml(p.name)}<br>${observerTag}${subjActTag}
           </td>
-          <td>${behaviorDesc.join('<br>')}${posTag}</td>
+          <td>${behaviorDesc.join('<br>')}${intTag}${posTag}</td>
           <td>${contextHtml}</td>
         </tr>
       `;
@@ -246,7 +256,7 @@ class DocxExport {
     `).join('');
 
     return `
-      <h2>三、 進階臨床行為量化紀錄明細 (ClassroomBehaviorRecord Schema)</h2>
+      <h2>三、 進階模式行為量化紀錄明細 (ClassroomBehaviorRecord Schema)</h2>
       <table class="record-table">
         <thead>
           <tr>
@@ -352,7 +362,7 @@ class DocxExport {
         </style>
       </head>
       <body>
-        <h1>國小課堂行為觀察量化與臨床鑑別評估報告 (進階版)</h1>
+        <h1>國小課堂行為觀察量化與鑑別評估報告 (進階模式)</h1>
         <p style="text-align:center; color:#475569; font-size:9.5pt;">
           去識別化學生代碼：<b>${safeStudentId}</b> ｜ 範圍：<b>${safeDesc}</b> ｜ 總事件數：<b>${analysis.totalEvents} 筆</b> ｜ 累積持續時間：<b>${analysis.totalDuration} 分鐘</b> ｜ 平均干擾強度：<b>${analysis.avgIntensity} / 3.0</b>
         </p>

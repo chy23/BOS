@@ -27,13 +27,13 @@
           <div class="flex items-center gap-2">
             <h1 class="text-base font-black text-[#1d1d1f] tracking-tight">BOS 行為觀察系統</h1>
             <button id="btnVersionBadge" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 transition-all cursor-pointer shadow-2xs" title="查看系統版本更新紀錄">
-              <span>v3.0.0</span>
+              <span>v3.1.0</span>
             </button>
             <span id="editModeBadge" class="hidden text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300">
               ✏️ 編輯模式
             </span>
           </div>
-          <p class="text-[11px] text-[#86868b] font-medium">基礎速記 ｜ 🔬 進階臨床量化 ｜ 疾病鑑別映射 ｜ 多師協同</p>
+          <p class="text-[11px] text-[#86868b] font-medium">基礎速記 ｜ 🔬 進階模式 ｜ 疾病鑑別映射 ｜ 多師協同</p>
         </div>
       </div>
 
@@ -74,7 +74,7 @@
           📝 基礎速記
         </button>
         <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1" data-target="view-advanced">
-          <span>🔬</span><span>進階臨床模式</span>
+          <span>🔬</span><span>進階模式</span>
           <span class="bg-indigo-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-black">PRO</span>
         </button>
         <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-analytics">
@@ -112,14 +112,14 @@
     <!-- ========================================== -->
     <section id="view-record" class="view-section space-y-4">
 
-      <!-- 雙模式快速切換橫幅 (基礎速記 vs 進階臨床量化) -->
+      <!-- 雙模式快速切換橫幅 (基礎速記 vs 進階模式) -->
       <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 px-4 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2.5">
           <span class="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-black tracking-wide">⚡ 基礎速記模式</span>
-          <span class="text-xs text-slate-300">目前為原始紙本 7 代碼計次模式。如需記錄科目、持續時間、強度、介入成效與臨床疾病鑑別指標，請切換至進階版。</span>
+          <span class="text-xs text-slate-300">原始紙本 7 代碼計次（已整合進階版之「科目、干擾強度、介入成效」快選）。如需 17 項細分行為、持續時間碼錶與疾病鑑別映射，請切換至進階模式。</span>
         </div>
         <button id="btnSwitchToAdvancedMode" type="button" class="px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer">
-          <span>🔬</span><span>切換至進階臨床量化模式</span><span>➔</span>
+          <span>🔬</span><span>切換至進階模式</span><span>➔</span>
         </button>
       </div>
 
@@ -175,15 +175,43 @@
         </div>
       </div>
 
-      <!-- 核心速記區塊 (標題、本節記錄者、V 標記與正向行為按鈕) -->
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
+      <!-- 核心速記區塊 (標題、本節科目/活動快選 [由進階模式導入]、V 標記與正向行為按鈕) -->
+      <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2.5">
           <h2 id="currentPeriodTitle" class="text-lg font-black text-slate-900 flex items-center gap-2">
             早自習 行為觀察
           </h2>
-          <span id="currentPeriodObserverTag" class="text-xs font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-md">
+          <span id="currentPeriodObserverTag" class="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded-lg">
             記錄者：導師
           </span>
+
+          <!-- ★ 由進階模式導入基礎模式：本節科目與教學活動型態快選 -->
+          <div class="flex items-center gap-1.5 bg-blue-50/70 px-2.5 py-1 rounded-xl border border-blue-200/80">
+            <span class="text-[11px] font-extrabold text-blue-900">📚 科目:</span>
+            <select id="basicSubjectSelect" class="bg-white border border-blue-200 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
+              <option value="">未指定</option>
+              <option value="國語">國語</option>
+              <option value="數學">數學</option>
+              <option value="英語">英語</option>
+              <option value="社會">社會</option>
+              <option value="自然">自然</option>
+              <option value="健體">健體</option>
+              <option value="藝文">藝文</option>
+              <option value="綜合">綜合</option>
+              <option value="彈性/自習">彈性/自習</option>
+              <option value="下課轉銜">下課轉銜</option>
+            </select>
+            <span class="text-[11px] font-extrabold text-blue-900 ml-1">🎯 型態:</span>
+            <select id="basicActivitySelect" class="bg-white border border-blue-200 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
+              <option value="">未指定</option>
+              <option value="全班聽講">全班聽講</option>
+              <option value="個別書寫作答">個別書寫作答</option>
+              <option value="小組討論合作">小組討論合作</option>
+              <option value="多媒體/平板操作">多媒體/平板操作</option>
+              <option value="動態操作/體育競賽">動態操作/體育競賽</option>
+              <option value="收拾轉銜/移動">收拾轉銜/移動</option>
+            </select>
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -204,20 +232,42 @@
         <!-- 由 app.js 動態渲染 -->
       </div>
 
-      <!-- A-B-C 行為脈絡注記 (前置前事 A、具體行為 B、後續後果 C) -->
+      <!-- A-B-C 行為脈絡注記 (整合進階模式之：干擾強度、介入成效、特殊臨床觀察快選) -->
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3.5">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-            <h3 class="font-black text-slate-900 text-sm">A-B-C 行為脈絡注記 (前置觸發 ➔ 具體行為 ➔ 環境後續)</h3>
+            <h3 class="font-black text-slate-900 text-sm">A-B-C 行為脈絡與處遇成效注記</h3>
           </div>
-          <span class="text-xs text-slate-600">依據特教與 ADHD 臨床行為觀察指引設計</span>
+
+          <!-- ★ 由進階模式導入基礎模式：本節干擾強度 (1~3) 與 介入成效 (Outcome) -->
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <div class="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
+              <span class="font-extrabold text-slate-700">⚡ 干擾強度:</span>
+              <select id="basicIntensitySelect" class="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800">
+                <option value="">未標記</option>
+                <option value="1">1 = 輕度 (自我干擾)</option>
+                <option value="2">2 = 中度 (干擾鄰近他人)</option>
+                <option value="3">3 = 重度 (中斷全班/具破壞性)</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+              <span class="font-extrabold text-emerald-900">🎯 處遇成效:</span>
+              <select id="basicOutcomeSelect" class="bg-white border border-emerald-300 rounded-lg px-2 py-0.5 text-xs font-bold text-emerald-900">
+                <option value="">未標記</option>
+                <option value="立即改善（重回任務 >5分）">立即改善（重回任務 &gt;5分）</option>
+                <option value="短暫改善（<1分後復發）">短暫改善（&lt;1分後復發）</option>
+                <option value="毫無反應（維持原狀）">毫無反應（維持原狀）</option>
+                <option value="抗拒加劇（情緒升級/頂撞）">抗拒加劇（情緒升級/頂撞）</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- 前置事件 (A: Antecedent) 快捷標籤群 -->
         <div>
           <label class="text-xs font-extrabold text-blue-800 block mb-1.5">
-            【A 前事觸發 (Antecedent)】行為發生前的情境與活動：
+            【A 前事觸發 (Antecedent)】行為發生前的情境與誘發因子：
           </label>
           <div id="antecedentTagsContainer" class="flex flex-wrap gap-1.5">
             <!-- 自動注入 A 標籤 -->
@@ -227,16 +277,16 @@
         <!-- 後續反應 (C: Consequence) 快捷標籤群 -->
         <div>
           <label class="text-xs font-extrabold text-amber-800 block mb-1.5">
-            【C 後果反應 (Consequence)】行為發生後周遭與教師的處遇：
+            【C 介入處置 (Intervention)】行為發生後教師採取的立即處遇：
           </label>
           <div id="consequenceTagsContainer" class="flex flex-wrap gap-1.5">
             <!-- 自動注入 C 標籤 -->
           </div>
         </div>
 
-        <!-- 詳細情境備註框 (支援手寫/語音轉文字) -->
+        <!-- 詳細情境備註框 -->
         <div>
-          <textarea id="contextNoteInput" rows="2" placeholder="詳細情境脈絡備忘：例如「隔壁同學主動向其借尺，該生大聲抗拒並推倒桌椅，經老師眼神提醒後回到冷靜角自行深呼吸...」" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500"></textarea>
+          <textarea id="contextNoteInput" rows="2" placeholder="詳細情境脈絡或對話備忘：例如「數學多步驟解題卡關，協助拆成兩階段算式後能順利完成...」" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
       </div>
 
@@ -263,26 +313,26 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- 1.5 進階臨床量化與疾病鑑別模式 (view-advanced) -->
+    <!-- 1.5 進階模式 (view-advanced) - 經統整簡化之高效三步介面 -->
     <!-- ========================================== -->
     <section id="view-advanced" class="view-section hidden space-y-5">
 
-      <!-- 進階模式頂部標題與控制列 -->
-      <div class="bg-gradient-to-r from-indigo-950 via-slate-900 to-blue-950 text-white p-5 rounded-3xl shadow-md space-y-3">
+      <!-- 進階模式頂部標題與控制列 (統整自動綁定資訊，收合次要技術欄位) -->
+      <div class="bg-gradient-to-r from-indigo-950 via-slate-900 to-blue-950 text-white p-4 sm:p-5 rounded-3xl shadow-md space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-2xl bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-2xl">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-xl">
               🔬
             </div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <h2 class="text-base sm:text-lg font-black tracking-tight">進階臨床行為觀察與量化紀錄模式 (ClassroomBehaviorRecord)</h2>
+                <h2 class="text-base sm:text-lg font-black tracking-tight">進階模式（課堂行為量化與臨床鑑別評估）</h2>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  JSON Schema Draft 2020-12
+                  已精簡統整 · 3 步快速完成
                 </span>
               </div>
               <p class="text-xs text-slate-300 mt-0.5">
-                除保留原始課堂速記外，完整涵蓋：17 項具體行為代碼、誘發因子歸因、量化時長與強度、介入成效追蹤及臨床疾病鑑別指標映射。
+                點選「具體誘發情境」與「17 項行為代碼」，系統自動歸類向度、自動映射關聯疾病指標並產出標準 JSON 與鑑別報表。
               </p>
             </div>
           </div>
@@ -295,282 +345,194 @@
               <span>🧪</span><span>載入範例 (rec_20261111_001)</span>
             </button>
             <button id="btnScrollToMappingTable" type="button" class="px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer">
-              <span>🩺</span><span>臨床鑑別診斷映射表</span>
+              <span>📖</span><span>展開臨床鑑別總表</span>
             </button>
           </div>
         </div>
 
-        <!-- 紀錄識別碼、去識別化學生代碼、ISO 8601 時間戳記列 -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-white/10 text-xs">
-          <div class="bg-white/10 rounded-xl p-2.5 flex items-center justify-between gap-2">
-            <span class="text-slate-300 font-bold">紀錄識別碼 (record_id):</span>
-            <input type="text" id="advRecordIdInput" class="bg-slate-900/80 text-emerald-300 font-mono font-bold px-2.5 py-1 rounded-lg border border-white/15 text-xs w-44 text-right" placeholder="rec_YYYYMMDD_001">
+        <!-- 簡化統整 1：自動綁定識別列（預設隱藏手動框，點擊可微調） -->
+        <details class="bg-white/10 rounded-xl px-3.5 py-2 border border-white/10 text-xs">
+          <summary class="cursor-pointer font-bold text-slate-200 flex items-center justify-between select-none">
+            <span>🔗 自動綁定系統編號與時間（點擊可展開手動微調 <code>record_id</code> / <code>student_id</code> / <code>timestamp</code>）</span>
+            <span class="text-emerald-300 font-mono text-[11px]">✓ 自動生成中</span>
+          </summary>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 mt-2 border-t border-white/10">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-slate-300 font-bold">紀錄識別碼:</span>
+              <input type="text" id="advRecordIdInput" class="bg-slate-900/80 text-emerald-300 font-mono font-bold px-2.5 py-1 rounded-lg border border-white/15 text-xs w-44 text-right">
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-slate-300 font-bold">學生代碼:</span>
+              <input type="text" id="advStudentIdInput" class="bg-slate-900/80 text-amber-300 font-mono font-black px-2.5 py-1 rounded-lg border border-white/15 text-xs w-28 text-center">
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-slate-300 font-bold">發生時間:</span>
+              <input type="datetime-local" id="advTimestampInput" class="bg-slate-900/80 text-white font-mono px-2 py-1 rounded-lg border border-white/15 text-xs">
+            </div>
           </div>
-          <div class="bg-white/10 rounded-xl p-2.5 flex items-center justify-between gap-2">
-            <span class="text-slate-300 font-bold">學生代碼 (student_id):</span>
-            <input type="text" id="advStudentIdInput" class="bg-slate-900/80 text-amber-300 font-mono font-black px-2.5 py-1 rounded-lg border border-white/15 text-xs w-28 text-center" placeholder="如 S105 或 B7K">
-          </div>
-          <div class="bg-white/10 rounded-xl p-2.5 flex items-center justify-between gap-2">
-            <span class="text-slate-300 font-bold">發生時間 (ISO 8601):</span>
-            <input type="datetime-local" id="advTimestampInput" class="bg-slate-900/80 text-white font-mono px-2 py-1 rounded-lg border border-white/15 text-xs">
-          </div>
-        </div>
+        </details>
       </div>
 
-      <!-- 主表單雙欄配置：左側五大結構化輸入、右側即時臨床診斷映射與 JSON 驗證 -->
+      <!-- 主表單雙欄配置：左側統整為 3 大精簡卡片、右側即時臨床鑑別卡 -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-        <!-- 左側 8 欄：五大步驟表單 -->
+        <!-- 左側 8 欄：統整後之三大步驟卡片 -->
         <div class="lg:col-span-8 space-y-4">
 
-          <!-- 一、基本情境資訊 (context) -->
+          <!-- 統整卡片 1：課堂情境與誘發前因 (Context + Antecedent 二合一) -->
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-black">一</span>
-                <span>基本情境資訊 (context)</span>
+                <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-black">1</span>
+                <span>課堂情境與誘發前因 (Context &amp; Antecedent A)</span>
               </h3>
-              <span class="text-[11px] text-slate-500 font-mono">required: ["subject", "period", "activity_type"]</span>
+              <span class="text-[11px] text-slate-500">點選具體誘發描述，自動歸入前因主分類</span>
             </div>
 
-            <!-- 1. 課堂節次 (period: 1-8) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                當日課堂節次 (<code>context.period</code>: 1 ~ 8 節，自動同步目前課表)：
-              </label>
-              <div id="advPeriodPills" class="flex flex-wrap gap-2">
-                <!-- 動態渲染 1~8 節 -->
+            <!-- 節次 + 科目 + 活動型態 緊湊排列 -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+              <div class="md:col-span-12">
+                <label class="text-xs font-extrabold text-slate-700 block mb-1.5">課堂節次 (<code>period</code> 1~8)：</label>
+                <div id="advPeriodPills" class="flex flex-wrap gap-1.5"></div>
+              </div>
+              <div class="md:col-span-7">
+                <label class="text-xs font-extrabold text-slate-700 block mb-1.5">課堂科目 (<code>subject</code>)：</label>
+                <div id="advSubjectPills" class="flex flex-wrap gap-1.5"></div>
+              </div>
+              <div class="md:col-span-5">
+                <label class="text-xs font-extrabold text-slate-700 block mb-1.5">教學活動型態 (<code>activity_type</code>)：</label>
+                <div id="advActivityPills" class="flex flex-wrap gap-1.5"></div>
               </div>
             </div>
 
-            <!-- 2. 課堂科目 (subject) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                課堂科目 (<code>context.subject</code>)：
-              </label>
-              <div id="advSubjectPills" class="flex flex-wrap gap-2">
-                <!-- 動態渲染 10 個科目 -->
+            <!-- 簡化統整 2：誘發因子「具體描述＋主分類」二合一單點選擇器 -->
+            <div class="pt-2 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-extrabold text-amber-900">
+                  ⚡ 誘發因子快選（點選任一具體情境，自動設定 <code>antecedent.details</code> 與 <code>antecedent.category</code>）：
+                </label>
               </div>
-            </div>
-
-            <!-- 3. 當前教學活動型態 (activity_type) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                當前教學活動型態 (<code>context.activity_type</code>)：
-              </label>
-              <div id="advActivityPills" class="flex flex-wrap gap-2">
-                <!-- 動態渲染 6 種教學活動型態 -->
+              <div id="advAntecedentDetailPills" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <!-- 動態渲染 9 項二合一誘發卡片 -->
               </div>
+              <!-- 保留隱藏或輔助之分類選擇容器供程式相容 -->
+              <div id="advAntecedentCatPills" class="hidden"></div>
             </div>
 
-            <!-- 4. 物理環境備註 (environment_notes) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-1.5">
-                物理環境備註 (<code>context.environment_notes</code>)：
-              </label>
-              <div id="advEnvPresets" class="flex flex-wrap gap-1.5 mb-2">
-                <!-- 快速環境標籤 -->
+            <!-- 前因臨床機制即時提示 + 物理環境備註 -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center pt-1">
+              <div id="advAntecedentMechanismBox" class="md:col-span-7 p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2">
+                <span class="text-sm">💡</span>
+                <div id="advAntecedentMechanismText" class="leading-relaxed"></div>
               </div>
-              <input type="text" id="advEnvNotesInput" placeholder="如：第 2 排靠窗，周圍有同學在小聲討論" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-
-          <!-- 二、前因與誘發因子 (antecedent - A) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-amber-500 text-white text-xs flex items-center justify-center font-black">二</span>
-                <span>前因與誘發因子 (antecedent - A)</span>
-              </h3>
-              <span class="text-[11px] text-amber-700 font-bold">從「觸發點」精準判斷潛在病因機制</span>
-            </div>
-
-            <!-- 主要誘發來源分類 (antecedent.category) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                1. 主要誘發來源分類 (<code>antecedent.category</code>)：
-              </label>
-              <div id="advAntecedentCatPills" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                <!-- 動態渲染 6 大誘發分類 -->
-              </div>
-            </div>
-
-            <!-- 誘發因子具體描述 (antecedent.details) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                2. 誘發因子具體描述 (<code>antecedent.details</code>，點選會自動對應上方分類)：
-              </label>
-              <div id="advAntecedentDetailPills" class="flex flex-wrap gap-2">
-                <!-- 動態渲染 9 項具體誘發描述 -->
-              </div>
-            </div>
-
-            <!-- 前因臨床機制即時提示 -->
-            <div id="advAntecedentMechanismBox" class="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2">
-              <span class="text-base">💡</span>
-              <div id="advAntecedentMechanismText" class="leading-relaxed">
-                請選擇上方誘發因子，系統將自動顯示關聯之神經心理與疾病機制。
+              <div class="md:col-span-5">
+                <input type="text" id="advEnvNotesInput" placeholder="物理環境備註 (如：第2排靠窗、周圍同學討論)" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500">
+                <div id="advEnvPresets" class="flex flex-wrap gap-1 mt-1.5"></div>
               </div>
             </div>
           </div>
 
-          <!-- 三、核心外顯行為 (behavior - B) -->
+          <!-- 統整卡片 2：核心外顯行為與量化指標 (Behavior B + Metrics 二合一) -->
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
               <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs flex items-center justify-center font-black">三</span>
-                <span>核心外顯行為 (behavior - B) · 6 大向度 17 項行為代碼</span>
+                <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs flex items-center justify-center font-black">2</span>
+                <span>核心外顯行為與量化指標 (Behavior B &amp; Metrics)</span>
               </h3>
-              <span class="text-[11px] text-slate-500 font-mono">required: ["category", "target_code"]</span>
+              <span class="text-[11px] text-indigo-700 font-bold">點選行為代碼自動推論向度與關聯疾病標籤</span>
             </div>
 
             <!-- 行為向度篩選列 -->
-            <div id="advBehaviorCategoryTabs" class="flex flex-wrap gap-1.5">
-              <!-- 動態渲染 全部 + 6 大向度 -->
-            </div>
+            <div id="advBehaviorCategoryTabs" class="flex flex-wrap gap-1.5"></div>
 
             <!-- 17 項行為代碼網格 -->
-            <div id="advBehaviorTargetGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <!-- 動態渲染 17 張行為代碼卡 -->
-            </div>
+            <div id="advBehaviorTargetGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
 
-            <!-- 擴充 Schema 屬性：臨床關聯障礙或疾病標籤 (related_conditions) -->
-            <div class="pt-2 border-t border-slate-100">
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                  <span>🏷️</span>
-                  <span>擴充 Schema 欄位：關聯可能障礙或疾病標籤 (<code>behavior.related_conditions</code>)</span>
-                </label>
-                <span class="text-[11px] text-slate-500">依行為與前因自動勾選，亦可手動微調</span>
-              </div>
-              <div id="advRelatedConditionsPills" class="flex flex-wrap gap-1.5">
-                <!-- 動態渲染 9 項 related_conditions 標籤 -->
-              </div>
-            </div>
-          </div>
-
-          <!-- 四、行為量化指標 (metrics) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-purple-600 text-white text-xs flex items-center justify-center font-black">四</span>
-                <span>行為量化指標 (metrics)</span>
-              </h3>
-              <span class="text-[11px] text-slate-500 font-mono">frequency · duration_minutes · intensity (1-3)</span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- 1. 發生次數 (frequency) -->
-              <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-                <label class="text-xs font-extrabold text-slate-700 block">
-                  1. 發生頻率次數 (<code>metrics.frequency</code>)：
-                </label>
-                <div class="flex items-center gap-3">
-                  <button type="button" id="btnAdvFreqMinus" class="w-10 h-10 rounded-xl bg-white border border-slate-300 font-black text-base hover:bg-slate-100 active:scale-95">-1</button>
-                  <input type="number" id="advFrequencyInput" min="1" value="1" class="w-20 text-center font-black text-lg border border-slate-300 rounded-xl py-1.5 bg-white tabular-numbers">
-                  <button type="button" id="btnAdvFreqPlus" class="w-10 h-10 rounded-xl bg-blue-600 text-white font-black text-base hover:bg-blue-700 active:scale-95">+1</button>
-                  <span class="text-xs text-slate-500">次（單次事件預設為 1）</span>
+            <!-- 簡化統整 3：量化指標 (強度 1~3、持續分鐘+碼錶、頻率) 濃縮為單列控制面板 -->
+            <div class="pt-3 border-t border-slate-100 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                <!-- 干擾強度 1~3 -->
+                <div class="md:col-span-6">
+                  <label class="text-xs font-extrabold text-slate-700 block mb-1.5">嚴重/干擾強度 (<code>intensity</code> 1~3)：</label>
+                  <div id="advIntensityCards" class="grid grid-cols-3 gap-1.5"></div>
                 </div>
-              </div>
 
-              <!-- 2. 行為持續時間 (duration_minutes) + 課堂碼錶 -->
-              <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-                <div class="flex items-center justify-between">
-                  <label class="text-xs font-extrabold text-slate-700">
-                    2. 持續時間 (<code>metrics.duration_minutes</code>)：
-                  </label>
-                  <button type="button" id="btnAdvStopwatch" class="px-2.5 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-[11px] font-black transition-all flex items-center gap-1">
-                    <span>⏱️</span><span id="advStopwatchLabel">啟動計時碼錶</span>
-                  </button>
+                <!-- 持續時間 + 碼錶 -->
+                <div class="md:col-span-4 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-[11px] font-extrabold text-slate-700">持續時間 (分鐘)：</label>
+                    <button type="button" id="btnAdvStopwatch" class="px-2 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-[10px] font-black flex items-center gap-1 cursor-pointer">
+                      <span>⏱️</span><span id="advStopwatchLabel">碼錶計時</span>
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <input type="number" id="advDurationInput" min="0" step="0.5" value="5" class="w-14 text-center font-black text-sm border border-slate-300 rounded-lg py-0.5 bg-white tabular-numbers">
+                    <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="1">1m</button>
+                    <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="3">3m</button>
+                    <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="8">8m</button>
+                    <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="15">15m</button>
+                  </div>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <input type="number" id="advDurationInput" min="0" step="0.5" value="5" class="w-20 text-center font-black text-base border border-slate-300 rounded-xl py-1 bg-white tabular-numbers">
-                  <span class="text-xs font-bold text-slate-700">分鐘</span>
-                  <div class="flex flex-wrap gap-1 ml-1">
-                    <button type="button" class="adv-dur-preset px-2 py-1 rounded-lg bg-white border border-slate-300 text-[11px] font-bold hover:bg-blue-50" data-min="1">1分</button>
-                    <button type="button" class="adv-dur-preset px-2 py-1 rounded-lg bg-white border border-slate-300 text-[11px] font-bold hover:bg-blue-50" data-min="3">3分</button>
-                    <button type="button" class="adv-dur-preset px-2 py-1 rounded-lg bg-white border border-slate-300 text-[11px] font-bold hover:bg-blue-50" data-min="5">5分</button>
-                    <button type="button" class="adv-dur-preset px-2 py-1 rounded-lg bg-white border border-slate-300 text-[11px] font-bold hover:bg-blue-50" data-min="8">8分</button>
-                    <button type="button" class="adv-dur-preset px-2 py-1 rounded-lg bg-white border border-slate-300 text-[11px] font-bold hover:bg-blue-50" data-min="15">15分</button>
+
+                <!-- 發生次數 -->
+                <div class="md:col-span-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <label class="text-[11px] font-extrabold text-slate-700 block mb-1">頻率 (次)：</label>
+                  <div class="flex items-center gap-1">
+                    <button type="button" id="btnAdvFreqMinus" class="w-7 h-7 rounded-lg bg-white border border-slate-300 font-black text-xs">-1</button>
+                    <input type="number" id="advFrequencyInput" min="1" value="1" class="w-10 text-center font-black text-sm border border-slate-300 rounded-lg py-0.5 bg-white tabular-numbers">
+                    <button type="button" id="btnAdvFreqPlus" class="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-xs">+1</button>
                   </div>
                 </div>
               </div>
             </div>
-
-            <!-- 3. 嚴重/干擾強度 (intensity: 1~3) -->
-            <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                3. 嚴重 / 干擾強度 (<code>metrics.intensity</code>: 1=輕度, 2=中度, 3=重度)：
-              </label>
-              <div id="advIntensityCards" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <!-- 動態渲染 1~3 強度卡片 -->
-              </div>
-            </div>
           </div>
 
-          <!-- 五、介入處置與成效 (intervention - C) & 質性觀察 -->
+          <!-- 統整卡片 3：介入處置與成效 (Intervention C & Notes) -->
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs flex items-center justify-center font-black">五</span>
-                <span>介入處置與成效 (intervention - C) 及質性文字觀察</span>
+                <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs flex items-center justify-center font-black">3</span>
+                <span>介入處置與成效 (Intervention C &amp; Notes)</span>
               </h3>
-              <span class="text-[11px] text-slate-500 font-mono">required: ["strategy", "outcome"]</span>
             </div>
 
-            <!-- 1. 大人採取的立即處置方式 (strategy) -->
             <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                1. 大人採取的立即處置方式 (<code>intervention.strategy</code>)：
-              </label>
-              <div id="advStrategyPills" class="flex flex-wrap gap-2">
-                <!-- 動態渲染 7 種介入處置 -->
-              </div>
+              <label class="text-xs font-extrabold text-slate-700 block mb-1.5">1. 大人採取的立即處置方式 (<code>strategy</code>)：</label>
+              <div id="advStrategyPills" class="flex flex-wrap gap-1.5"></div>
             </div>
 
-            <!-- 2. 介入後的學生反應成效 (outcome) -->
             <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-2">
-                2. 介入後的學生反應成效 (<code>intervention.outcome</code>)：
-              </label>
-              <div id="advOutcomeCards" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <!-- 動態渲染 4 種反應成效 -->
-              </div>
+              <label class="text-xs font-extrabold text-slate-700 block mb-1.5">2. 介入後的學生反應成效 (<code>outcome</code>)：</label>
+              <div id="advOutcomeCards" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
             </div>
 
-            <!-- 3. 質性文字觀察 (qualitative_notes) -->
             <div>
-              <label class="text-xs font-extrabold text-slate-700 block mb-1.5">
-                3. 質性文字觀察、對話記錄或身體抱怨 (<code>qualitative_notes</code>)：
-              </label>
-              <textarea id="advQualitativeNotesInput" rows="3" placeholder="例如：卡在多步驟應用題第二小題，協助將題目拆成兩階段算式後，能順利完成後續運算。（或：稱頭痛想吐、趴下抗拒時說『我就是笨』）" class="w-full border border-slate-300 rounded-xl p-3 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500"></textarea>
+              <textarea id="advQualitativeNotesInput" rows="2" placeholder="質性文字觀察、對話記錄或身體抱怨（如：卡在多步驟應用題第二小題，協助將題目拆成兩階段算式後能順利完成）" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500"></textarea>
             </div>
 
-            <!-- 同步累加至基礎速記表勾選 + 儲存按鈕 -->
-            <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <!-- 儲存列 -->
+            <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
               <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
                 <input type="checkbox" id="advSyncToBasicCheckbox" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                <span>🔗 儲存時同步累加至「基礎速記表」對應節次與行為次數（雙模式資料連動）</span>
+                <span>🔗 同步累加至「基礎速記表」對應節次與行為次數</span>
               </label>
 
-              <div class="flex flex-wrap items-center gap-2.5">
-                <button type="button" id="btnSaveAdvRecord" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer">
-                  <span>💾</span><span>儲存進階臨床紀錄 (並同步雲端)</span>
-                </button>
-              </div>
+              <button type="button" id="btnSaveAdvRecord" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                <span>💾</span><span>儲存進階紀錄 (並同步雲端)</span>
+              </button>
             </div>
           </div>
 
         </div>
 
-        <!-- 右側 4 欄：即時臨床鑑別診斷卡 ＋ 即時標準 JSON 預覽與 Schema 驗證器 -->
+        <!-- 右側 4 欄：即時臨床鑑別診斷卡（整合自動映射之 related_conditions 標籤）＋ 折疊式 JSON 驗證器 -->
         <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-20">
 
           <!-- 🩺 即時臨床診斷與鑑別關鍵點提示卡 -->
           <div class="bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-5 rounded-2xl border border-indigo-200 shadow-xs space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-xs font-black text-indigo-950 flex items-center gap-1.5">
-                <span>🩺</span><span>行為代碼臨床診斷與鑑別映射</span>
+                <span>🩺</span><span>即時臨床診斷與鑑別映射</span>
               </span>
               <span id="advDiagCodeBadge" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-600 text-white font-mono">
                 OFF
@@ -592,36 +554,50 @@
                 <span class="text-[11px] font-black text-amber-300 block">🔍 臨床鑑別關鍵點 (Clinical Key)：</span>
                 <p id="advDiagClinicalKey" class="text-xs leading-relaxed text-slate-100">—</p>
               </div>
+
+              <!-- 簡化統整 4：自動推論之 related_conditions 直接整合於右側鑑別卡內 -->
+              <div class="p-2.5 bg-white rounded-xl border border-indigo-100 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-extrabold text-slate-700">🏷️ 自動映射關聯疾病標籤 (<code>related_conditions</code>)：</span>
+                  <span class="text-[10px] text-slate-400">可點擊微調</span>
+                </div>
+                <div id="advRelatedConditionsPills" class="flex flex-wrap gap-1"></div>
+              </div>
             </div>
           </div>
 
-          <!-- { } 即時 ClassroomBehaviorRecord JSON 結構預覽與驗證 -->
-          <div class="bg-slate-900 text-slate-100 p-4 rounded-2xl border border-slate-800 shadow-sm space-y-3">
-            <div class="flex items-center justify-between">
+          <!-- 簡化統整 5：{ } 標準 JSON 預覽改為可收折抽屜，保持畫面清爽 -->
+          <details class="bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
+            <summary class="p-3.5 cursor-pointer flex items-center justify-between select-none">
               <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-emerald-400 font-mono">{ } JSON Schema 即時結構</span>
+                <span class="text-xs font-black text-emerald-400 font-mono">{ } 標準 JSON 結構預覽</span>
                 <span id="advSchemaValidBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                   ✓ 驗證通過
                 </span>
               </div>
-              <button type="button" id="btnCopyAdvJson" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold border border-slate-700 transition-colors cursor-pointer">
-                複製 JSON
-              </button>
+              <span class="text-[11px] text-slate-400">展開/收合 ▾</span>
+            </summary>
+            <div class="p-3.5 pt-0 space-y-2 border-t border-slate-800">
+              <div class="flex justify-end">
+                <button type="button" id="btnCopyAdvJson" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold border border-slate-700 transition-colors cursor-pointer">
+                  📋 複製 JSON
+                </button>
+              </div>
+              <pre id="advJsonPreviewBox" class="text-[11px] font-mono text-emerald-300 bg-slate-950/90 p-3 rounded-xl overflow-x-auto max-h-64 leading-relaxed"></pre>
             </div>
-            <pre id="advJsonPreviewBox" class="text-[11px] font-mono text-emerald-300 bg-slate-950/90 p-3 rounded-xl overflow-x-auto max-h-80 leading-relaxed"></pre>
-          </div>
+          </details>
 
         </div>
       </div>
 
       <!-- ===================================================== -->
-      <!-- 進階臨床推論指標統計、已存事件列表與匯出面板 -->
+      <!-- 進階模式指標統計、已存事件列表與匯出面板 -->
       <!-- ===================================================== -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h3 class="font-black text-slate-900 text-base flex items-center gap-2">
-              <span>📊</span><span>個案進階臨床指標統計與事件紀錄庫</span>
+              <span>📊</span><span>進階模式：指標統計與已存事件紀錄庫</span>
               <span id="advCurrentStudentBadge" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-800"></span>
             </h3>
             <p class="text-xs text-slate-600 mt-0.5">自動彙整該個案之關聯疾病標籤加權指數、介入策略有效率與逐筆量化紀錄。</p>
@@ -629,7 +605,7 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <button type="button" id="btnExportAdvWord" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
-              <span>📄</span><span>匯出進階臨床鑑別 Word 報表 (.doc)</span>
+              <span>📄</span><span>匯出進階鑑別 Word 報表 (.doc)</span>
             </button>
             <button type="button" id="btnExportAdvJson" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
               <span>{ }</span><span>匯出標準 JSON (.json)</span>
@@ -644,9 +620,7 @@
               <span>🏷️ 臨床關聯障礙 / 疾病指標分佈 (related_conditions)</span>
               <span class="text-[11px] text-slate-500 font-normal">依發生頻率 × 干擾強度加權計算</span>
             </h4>
-            <div id="advConditionsSummaryList" class="space-y-2">
-              <!-- 動態渲染疾病指標條 -->
-            </div>
+            <div id="advConditionsSummaryList" class="space-y-2"></div>
           </div>
 
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2.5">
@@ -654,76 +628,71 @@
               <span>🛡️ 教師介入處置策略成效排行 (Intervention Outcomes)</span>
               <span class="text-[11px] text-slate-500 font-normal">作為 IEP 有效教學策略依據</span>
             </h4>
-            <div id="advInterventionSummaryList" class="space-y-2">
-              <!-- 動態渲染介入策略有效率 -->
+            <div id="advInterventionSummaryList" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- 已儲存之進階事件清單 -->
+        <div>
+          <h4 class="text-xs font-black text-slate-800 mb-2.5">🗂 已記錄之進階行為事件明細 (點擊可載入檢視或匯出)：</h4>
+          <div id="advRecordsTableContainer" class="overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- ===================================================== -->
+      <!-- 完整臨床診斷與鑑別疾病映射總表 (改為可展開抽屜，避免頁面過長) -->
+      <!-- ===================================================== -->
+      <details id="clinicalMappingReferenceSection" class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <summary class="p-5 cursor-pointer flex items-center justify-between bg-slate-50/70 hover:bg-slate-100/70 transition-colors select-none">
+          <div>
+            <h3 class="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
+              <span>📖</span><span>臨床行為代碼（17項 target_code）與誘發因子（5大 antecedent）疾病診斷鑑別映射總表</span>
+            </h3>
+            <p class="text-xs text-slate-600 mt-0.5">點擊展開查閱完整醫學/特教鑑別指南（首要指向疾病、共病鑑別、臨床鑑別關鍵點）。</p>
+          </div>
+          <span class="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-black border border-indigo-200">展開 / 收合總表 ▾</span>
+        </summary>
+
+        <div class="p-5 space-y-5 border-t border-slate-100">
+          <!-- 一、17 項行為代碼與疾病診斷映射表 -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-black text-indigo-900">一、 17 項行為代碼（target_code）與疾病診斷映射</h4>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-800 font-black border-b border-slate-200">
+                    <th class="p-2.5 w-20">行為代碼</th>
+                    <th class="p-2.5 w-36">行為中文名稱</th>
+                    <th class="p-2.5 w-44">首要指向疾病 (Primary)</th>
+                    <th class="p-2.5 w-48">鑑別診斷與常見共病 (Differential)</th>
+                    <th class="p-2.5">臨床鑑別關鍵點</th>
+                    <th class="p-2.5 w-44">Schema 疾病標籤</th>
+                  </tr>
+                </thead>
+                <tbody id="clinicalBehaviorMappingTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 二、誘發因子與疾病診斷歸因表 -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-black text-amber-900">二、 誘發因子（Antecedents）與疾病診斷歸因</h4>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-amber-50 text-amber-950 font-black border-b border-amber-200">
+                    <th class="p-2.5 w-44">誘發分類代碼</th>
+                    <th class="p-2.5 w-40">分類名稱</th>
+                    <th class="p-2.5">觸發情境範例</th>
+                    <th class="p-2.5 w-64">最可能關聯的疾病機制</th>
+                  </tr>
+                </thead>
+                <tbody id="clinicalAntecedentMappingTableBody"></tbody>
+              </table>
             </div>
           </div>
         </div>
-
-        <!-- 已儲存之進階臨床事件清單 -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2.5">🗂 已記錄之進階臨床行為事件明細 (點擊可載入檢視或匯出)：</h4>
-          <div id="advRecordsTableContainer" class="overflow-x-auto">
-            <!-- 動態渲染進階紀錄表格 -->
-          </div>
-        </div>
-      </div>
-
-      <!-- ===================================================== -->
-      <!-- 完整臨床診斷與鑑別疾病映射總表 (17項行為代碼 + 5大誘發因子) -->
-      <!-- ===================================================== -->
-      <div id="clinicalMappingReferenceSection" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-        <div class="border-b border-slate-100 pb-3">
-          <h3 class="font-black text-slate-900 text-base flex items-center gap-2">
-            <span>📖</span><span>臨床行為代碼（target_code）與誘發因子（antecedent）疾病診斷鑑別映射總表</span>
-          </h3>
-          <p class="text-xs text-slate-600 mt-0.5">
-            作為系統產出報表、特教心評篩檢與醫療轉介溝通時的推論規則與臨床鑑別指南。
-          </p>
-        </div>
-
-        <!-- 一、17 項行為代碼與疾病診斷映射表 -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-black text-indigo-900">一、 17 項行為代碼（target_code）與疾病診斷映射</h4>
-          <div class="overflow-x-auto rounded-xl border border-slate-200">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="bg-slate-100 text-slate-800 font-black border-b border-slate-200">
-                  <th class="p-2.5 w-20">行為代碼</th>
-                  <th class="p-2.5 w-36">行為中文名稱</th>
-                  <th class="p-2.5 w-44">首要指向疾病 (Primary)</th>
-                  <th class="p-2.5 w-48">鑑別診斷與常見共病 (Differential)</th>
-                  <th class="p-2.5">臨床鑑別關鍵點</th>
-                  <th class="p-2.5 w-44">Schema 疾病標籤</th>
-                </tr>
-              </thead>
-              <tbody id="clinicalBehaviorMappingTableBody">
-                <!-- 由 app.js 自動注入 17 列 -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- 二、誘發因子與疾病診斷歸因表 -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-black text-amber-900">二、 誘發因子（Antecedents）與疾病診斷歸因</h4>
-          <div class="overflow-x-auto rounded-xl border border-slate-200">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="bg-amber-50 text-amber-950 font-black border-b border-amber-200">
-                  <th class="p-2.5 w-44">誘發分類代碼</th>
-                  <th class="p-2.5 w-40">分類名稱</th>
-                  <th class="p-2.5">觸發情境範例</th>
-                  <th class="p-2.5 w-64">最可能關聯的疾病機制</th>
-                </tr>
-              </thead>
-              <tbody id="clinicalAntecedentMappingTableBody">
-                <!-- 由 app.js 自動注入 -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      </details>
 
     </section>
 
@@ -1095,18 +1064,17 @@
           <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 border-4 border-white shadow-xs"></div>
           <div class="flex items-center justify-between flex-wrap gap-1">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-100 text-indigo-900">
-              v3.0.0 當前最新版 (PRO)
+              v3.1.0 當前最新版 (PRO)
             </span>
             <span class="text-xs text-slate-400 font-mono">2026-11-11</span>
           </div>
-          <h4 class="font-black text-slate-900 text-sm">進階臨床行為量化模式 · ClassroomBehaviorRecord Schema · 疾病鑑別診斷映射</h4>
+          <h4 class="font-black text-slate-900 text-sm">進階模式精簡統整 · 基礎模式融合臨床核心指標 · 疾病鑑別診斷映射</h4>
           <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
-            <li><b>雙模式無縫共存</b>：保留原始紙本 7 代碼「基礎速記模式」，並新增「🔬 進階臨床量化模式」，兩者支援自動同步累加。</li>
-            <li><b>標準化資料結構 (JSON Schema Draft 2020-12)</b>：完整實作 <code>ClassroomBehaviorRecord</code> 結構（<code>record_id</code>、<code>student_id</code>、<code>timestamp</code>、<code>context</code>、<code>antecedent</code>、<code>behavior</code>、<code>metrics</code>、<code>intervention</code>、<code>qualitative_notes</code>）與即時 Schema 驗證器。</li>
-            <li><b>6 大向度 17 項具體行為代碼</b>：涵蓋 <code>OFF</code>、<code>FD</code>、<code>TI</code>、<code>WM</code>、<code>LM</code>、<code>OOS</code>、<code>MV</code>、<code>NV</code>、<code>CO</code>、<code>TB</code>、<code>IN</code>、<code>RU</code>、<code>FR</code>、<code>RSD</code>、<code>TIC_M</code>、<code>TIC_V</code>、<code>HF</code>。</li>
-            <li><b>臨床診斷與鑑別疾病映射引擎</b>：每項行為與誘發因子均即時對映「首要指向疾病 (Primary)」、「鑑別診斷與共病 (Differential)」、「臨床鑑別關鍵點」及擴充屬性 <code>related_conditions</code>（9 大臨床障礙標籤）。</li>
-            <li><b>行為量化指標與課堂碼錶</b>：內建持續時間（<code>duration_minutes</code>）即時碼錶、干擾強度 1~3 級評估，以及介入處置（<code>strategy</code>）與成效（<code>outcome</code>）有效率統計。</li>
-            <li><b>多元專業匯出</b>：支援匯出「進階臨床鑑別 Word 報告 (.doc)」與標準「ClassroomBehaviorRecord (.json)」，並同步寫入 Google 試算表。</li>
+            <li><b>更名為「🔬 進階模式」並將 5 大區塊統整為 3 步驟極速卡片</b>：系統識別欄位自動綁定收合、前因分類與具體描述二合一單鍵點選、行為選擇自動連動疾病標籤與單排量化指標。</li>
+            <li><b>基礎模式融合進階高價值指標</b>：於基礎速記模式無痛加入「📚 課堂科目」、「🎯 活動型態」、「⚡ 干擾強度 (1~3級)」、「🎯 介入處遇成效」與升級版臨床 A-B-C 標籤。</li>
+            <li><b>標準化資料結構 (JSON Schema Draft 2020-12)</b>：完整實作 <code>ClassroomBehaviorRecord</code> 結構與即時 Schema 驗證器。</li>
+            <li><b>6 大向度 17 項具體行為代碼與疾病鑑別映射</b>：涵蓋 <code>OFF</code>~<code>HF</code> 共 17 項代碼，即時對映首要指向疾病、鑑別診斷與 9 大臨床障礙標籤（<code>related_conditions</code>）。</li>
+            <li><b>課堂即時碼錶與多元匯出</b>：內建持續時間（<code>duration_minutes</code>）碼錶，支援匯出 Word 鑑別報告與標準 <code>.json</code>。</li>
           </ul>
         </div>
 

@@ -2,14 +2,14 @@
  * App: 主應用程式邏輯控制器 (升級：多師協同、個案管理刪除、A-B-C脈絡、正向行為、雲端程式碼)
  */
 document.addEventListener('DOMContentLoaded', () => {
-  // 核心行為代號 (還原附檔紙本)
+  // 核心行為代號 (還原附檔紙本，並配置直覺圖示)
   const BEHAVIORS = [
-    { code: '○', name: '玩文具、雜物、桌椅', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅', badgeColor: 'bg-blue-600' },
-    { code: '+', name: '放空、發呆', desc: '眼神渙散、無視線接觸課堂重點、未跟隨教學', badgeColor: 'bg-emerald-600' },
-    { code: '↑', name: '尋找東西、遺失物', desc: '低頭翻書包、找筆、掉文具、離開座位搜尋', badgeColor: 'bg-amber-600' },
-    { code: '～', name: '扭、抖動身體', desc: '頻繁抖腳、扭動扭曲身軀、坐立難安', badgeColor: 'bg-purple-600' },
-    { code: '×', name: '以動作、講話干擾附近人', desc: '拍打同學、故意推擠、交談、發出聲響', badgeColor: 'bg-rose-600' },
-    { code: '！', name: '未舉手發言、搶話', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600' }
+    { code: '○', name: '玩文具、雜物、桌椅', icon: '✏️', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅', badgeColor: 'bg-blue-600', lightColor: 'text-blue-600' },
+    { code: '+', name: '放空、發呆', icon: '💭', desc: '眼神渙散、無視線接觸課堂重點、未跟隨教學', badgeColor: 'bg-emerald-600', lightColor: 'text-emerald-600' },
+    { code: '↑', name: '尋找東西、遺失物', icon: '🔍', desc: '低頭翻書包、找筆、掉文具、離開座位搜尋', badgeColor: 'bg-amber-600', lightColor: 'text-amber-600' },
+    { code: '～', name: '扭、抖動身體', icon: '🦵', desc: '頻繁抖腳、扭動扭曲身軀、坐立難安', badgeColor: 'bg-purple-600', lightColor: 'text-purple-600' },
+    { code: '×', name: '以動作、講話干擾附近人', icon: '🗣️', desc: '拍打同學、故意推擠、交談、發出聲響', badgeColor: 'bg-rose-600', lightColor: 'text-rose-600' },
+    { code: '！', name: '未舉手發言、搶話', icon: '📢', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600', lightColor: 'text-pink-600' }
   ];
 
   // 學校作息課表排程
@@ -419,39 +419,61 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.behaviorCardsContainer.innerHTML = '';
     BEHAVIORS.forEach(b => {
       const card = document.createElement('div');
-      card.className = 'behavior-card bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-xs hover:border-blue-400 transition-all select-none active:scale-[0.99] flex flex-col justify-between';
+      card.className = 'behavior-card relative bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl p-4 shadow-xs transition-all select-none cursor-pointer flex flex-col justify-between overflow-hidden group';
       
       card.innerHTML = `
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
-              ${b.code}
-            </span>
-            <div class="flex items-center gap-1.5">
-              <span id="countDisplay_${b.code}" class="text-3xl font-black text-slate-800 tracking-tight">0</span>
-              <span class="text-xs text-slate-500 font-semibold">次</span>
-            </div>
-          </div>
-          <h3 class="font-bold text-slate-800 text-sm leading-snug mb-1">${b.name}</h3>
-          <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">${b.desc}</p>
+        <!-- 右側空白處大圖示浮水印 (眼角餘光瞬間辨識) -->
+        <div class="absolute right-3.5 bottom-12 text-6xl opacity-15 pointer-events-none select-none transition-transform group-hover:scale-110">
+          ${b.icon}
         </div>
 
-        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-          <button type="button" class="btn-minus flex-1 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs transition-colors" data-code="${b.code}">
-            -1
+        <div>
+          <!-- 上方：代號 + 醒目生活化圖示 + 次數 -->
+          <div class="flex items-center justify-between mb-2.5 relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
+                ${b.code}
+              </span>
+              <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl bg-slate-100 border border-slate-200 shadow-2xs" title="${b.name}">
+                ${b.icon}
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
+              <span id="countDisplay_${b.code}" class="text-3xl font-black text-slate-800 tracking-tight transition-transform">0</span>
+              <span class="text-xs text-slate-500 font-bold">次</span>
+            </div>
+          </div>
+
+          <!-- 中間文字區域 (點擊此處任何空白均立即 +1) -->
+          <div class="relative z-10 pr-10">
+            <h3 class="font-black text-slate-900 text-sm leading-snug mb-1 flex items-center gap-1.5">
+              <span>${b.name}</span>
+            </h3>
+            <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">${b.desc}</p>
+          </div>
+        </div>
+
+        <!-- 下方操作區：-1 按鈕 與 快速點擊提示條 -->
+        <div class="flex items-center gap-2 pt-2.5 border-t border-slate-100 relative z-10">
+          <button type="button" class="btn-minus px-3 py-2 bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-extrabold rounded-xl text-xs transition-colors flex items-center gap-1 active:scale-95" data-code="${b.code}" title="扣除 1 次">
+            <span>-1</span>
           </button>
-          <button type="button" class="btn-plus flex-[2] py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-500/20 active:translate-y-0.5 transition-all" data-code="${b.code}">
-            + 點擊記次
-          </button>
+          <div class="flex-1 py-2 px-3 bg-blue-50/80 group-hover:bg-blue-600 text-blue-700 group-hover:text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1 transition-all border border-blue-200 group-hover:border-blue-600 shadow-2xs">
+            <span>👆 點擊卡片空白處 +1</span>
+          </div>
         </div>
       `;
 
-      card.querySelector('.btn-plus').addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleBehaviorCountChange(b.code, 1);
+      // 點擊卡片任何空白處（除了 -1 按鈕外），均視為加一次
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('.btn-minus')) {
+          handleBehaviorCountChange(b.code, 1);
+        }
       });
 
-      card.querySelector('.btn-minus').addEventListener('click', (e) => {
+      // -1 按鈕
+      const minusBtn = card.querySelector('.btn-minus');
+      minusBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         handleBehaviorCountChange(b.code, -1);
       });
@@ -588,6 +610,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     period.observer = getActiveObserver();
     refreshPeriodUI();
+
+    // 觸發數字跳動動畫
+    const countElem = document.getElementById(`countDisplay_${code}`);
+    if (countElem) {
+      countElem.classList.remove('number-pop');
+      void countElem.offsetWidth; // 強制重繪
+      countElem.classList.add('number-pop');
+    }
   }
 
   function saveCurrentPeriodInputs() {

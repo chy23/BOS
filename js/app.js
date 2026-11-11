@@ -1,8 +1,8 @@
 /**
- * App: 主應用程式邏輯控制器
+ * App: 主應用程式邏輯控制器 (升級：多師協同、個案管理刪除、A-B-C脈絡、正向行為、雲端程式碼)
  */
 document.addEventListener('DOMContentLoaded', () => {
-  // 核心常數
+  // 核心行為代號 (還原附檔紙本)
   const BEHAVIORS = [
     { code: '○', name: '玩文具、雜物、桌椅', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅', badgeColor: 'bg-blue-600' },
     { code: '+', name: '放空、發呆', desc: '眼神渙散、無視線接觸課堂重點、未跟隨教學', badgeColor: 'bg-emerald-600' },
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { code: '！', name: '未舉手發言、搶話', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600' }
   ];
 
-  // 依據學校課表作息時間配置
+  // 學校作息課表排程
   const SCHEDULE = [
     { id: 0, name: '早自習', timeStr: '08:00~08:35', desc: '晨間活動 (08:00~08:15) / 導師時間 (08:15~08:35)', startMin: 8 * 60, endMin: 8 * 60 + 35, spanMin: [0, 8 * 60 + 39] },
     { id: 1, name: '第一節', timeStr: '08:40~09:20', desc: '第 1 節課 (下課 09:20~09:30)', startMin: 8 * 60 + 40, endMin: 9 * 60 + 20, spanMin: [8 * 60 + 40, 9 * 60 + 25] },
@@ -27,10 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const PERIODS = SCHEDULE.map(s => s.name);
 
-  const COMMON_CONTEXT_TAGS = [
-    '教師單向講課', '學生個別書寫', '分組討論合作',
-    '課堂測驗小考', '抄寫聯絡簿', '收發作業考卷',
-    '上課轉銜鐘響', '同儕主動攀談', '電腦/藝能實作', '自由活動時間'
+  // A 前事標籤與 C 後果標籤 (依據特教與 ADHD 指引)
+  const ANTECEDENT_TAGS = [
+    '教師單向講課', '學生獨立書寫', '分組討論合作',
+    '課堂測驗小考', '收發作業聯絡簿', '上課轉銜鐘響',
+    '同儕主動攀談', '疲憊飢餓/身體不適', '自由活動時間'
+  ];
+
+  const CONSEQUENCE_TAGS = [
+    '教師口頭提醒', '手勢眼神示意', '肢體引導回座',
+    '給予讚美/代幣', '同儕起鬨圍觀', '抽離至冷靜角',
+    '課後個別談話', '刻意忽略/暫不處理'
   ];
 
   // 狀態管理
@@ -38,72 +45,148 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentDate = new Date().toISOString().split('T')[0];
   let currentPeriodIndex = 0;
   let isEditMode = false;
-
-  // 當前日期的 9 節次暫存資料結構
   let dayRecord = createEmptyDayRecord(currentCaseId, currentDate);
 
-  // 初始化 DOM 參考
+  // DOM 參考快取
   const dom = {
-    // 頂部與導航
+    // 頂部
+    observerRoleSelect: document.getElementById('observerRoleSelect'),
+    customObserverInput: document.getElementById('customObserverInput'),
     caseSelect: document.getElementById('caseSelect'),
     btnNewCase: document.getElementById('btnNewCase'),
-    btnCopyCaseId: document.getElementById('btnCopyCaseId'),
+    btnManageCases: document.getElementById('btnManageCases'),
+    btnFetchCloud: document.getElementById('btnFetchCloud'),
+    syncBadge: document.getElementById('syncBadge'),
+    editModeBadge: document.getElementById('editModeBadge'),
+
+    // 導覽
+    navTabs: document.querySelectorAll('.nav-tab'),
+    viewSections: document.querySelectorAll('.view-section'),
+
+    // 基本設定
     dateInput: document.getElementById('dateInput'),
     medTimeInput: document.getElementById('medTimeInput'),
     discomfortInput: document.getElementById('discomfortInput'),
-    editModeBadge: document.getElementById('editModeBadge'),
-    syncBadge: document.getElementById('syncBadge'),
-    
-    // 即時課表排程
+
+    // 課表排程列
     liveClockDisplay: document.getElementById('liveClockDisplay'),
     liveScheduleStatus: document.getElementById('liveScheduleStatus'),
     autoTimeJumpCheckbox: document.getElementById('autoTimeJumpCheckbox'),
     btnJumpToCurrentPeriod: document.getElementById('btnJumpToCurrentPeriod'),
 
-    // 頁籤切換
-    navTabs: document.querySelectorAll('.nav-tab'),
-    viewSections: document.querySelectorAll('.view-section'),
-
     // 節次列
     periodTabsContainer: document.getElementById('periodTabsContainer'),
     currentPeriodTitle: document.getElementById('currentPeriodTitle'),
-
-    // 速記按鈕卡片區
-    behaviorCardsContainer: document.getElementById('behaviorCardsContainer'),
+    currentPeriodObserverTag: document.getElementById('currentPeriodObserverTag'),
     btnMarkV: document.getElementById('btnMarkV'),
-    
-    // 情境脈絡區
-    contextTagsContainer: document.getElementById('contextTagsContainer'),
+    btnPositiveBehavior: document.getElementById('btnPositiveBehavior'),
+    positiveCountBadge: document.getElementById('positiveCountBadge'),
+
+    // 速記區與 A-B-C
+    behaviorCardsContainer: document.getElementById('behaviorCardsContainer'),
+    antecedentTagsContainer: document.getElementById('antecedentTagsContainer'),
+    consequenceTagsContainer: document.getElementById('consequenceTagsContainer'),
     contextNoteInput: document.getElementById('contextNoteInput'),
 
-    // 底部操作
-    btnSaveDay: document.getElementById('btnSaveDay'),
+    // 底部按鈕
     btnResetPeriod: document.getElementById('btnResetPeriod'),
     btnExportDailyWord: document.getElementById('btnExportDailyWord'),
+    btnSaveSinglePeriod: document.getElementById('btnSaveSinglePeriod'),
+    btnSaveDay: document.getElementById('btnSaveDay'),
 
-    // 統計頁面
+    // 統計頁
     analyticsCaseSelect: document.getElementById('analyticsCaseSelect'),
     analyticsRangeSelect: document.getElementById('analyticsRangeSelect'),
     summaryTotalDays: document.getElementById('summaryTotalDays'),
     summaryTotalBehaviors: document.getElementById('summaryTotalBehaviors'),
-    summaryTopBehavior: document.getElementById('summaryTopBehavior'),
+    summaryTotalPositive: document.getElementById('summaryTotalPositive'),
     summaryTopPeriod: document.getElementById('summaryTopPeriod'),
+    adhdInattentionCount: document.getElementById('adhdInattentionCount'),
+    adhdHyperactivityCount: document.getElementById('adhdHyperactivityCount'),
+    adhdImpulsivityCount: document.getElementById('adhdImpulsivityCount'),
     insightTextBox: document.getElementById('insightTextBox'),
     heatmapContainer: document.getElementById('heatmapContainer'),
     btnExportWeeklyWord: document.getElementById('btnExportWeeklyWord'),
 
-    // 歷史紀錄頁面
+    // 歷史紀錄
     historyTableBody: document.getElementById('historyTableBody'),
     btnSyncAll: document.getElementById('btnSyncAll'),
 
-    // 設定頁面
+    // 設定頁
     apiUrlInput: document.getElementById('apiUrlInput'),
     btnSaveApiUrl: document.getElementById('btnSaveApiUrl'),
     btnTestApi: document.getElementById('btnTestApi'),
-    apiTestResult: document.getElementById('apiTestResult')
+    apiTestResult: document.getElementById('apiTestResult'),
+    btnCopyBackendCode: document.getElementById('btnCopyBackendCode'),
+    backendCodeTextarea: document.getElementById('backendCodeTextarea'),
+
+    // 個案管理彈窗
+    caseManagerModal: document.getElementById('caseManagerModal'),
+    btnCloseCaseModal: document.getElementById('btnCloseCaseModal'),
+    btnModalClose: document.getElementById('btnModalClose'),
+    btnModalAddNewCase: document.getElementById('btnModalAddNewCase'),
+    caseModalList: document.getElementById('caseModalList')
   };
 
-  // ===================== 課表時間排程演算法 =====================
+  // ===================== 初始化 =====================
+  function init() {
+    renderCaseOptions();
+    dom.dateInput.value = currentDate;
+
+    // 老師稱謂初始化
+    const savedRole = window.GoogleSync.getObserverRole();
+    if (['導師', '英文科任', '自然科任', '體育科任', '音樂科任', '特教/資源班'].includes(savedRole)) {
+      dom.observerRoleSelect.value = savedRole;
+    } else {
+      dom.observerRoleSelect.value = '自訂';
+      dom.customObserverInput.classList.remove('hidden');
+      dom.customObserverInput.value = savedRole;
+    }
+
+    // 自動匹配當前節次
+    const currentSched = getCurrentScheduleInfo();
+    currentPeriodIndex = currentSched.index;
+
+    renderPeriodTabs();
+    renderBehaviorCards();
+    renderAbcTags();
+
+    loadExistingRecordForDate(currentCaseId, currentDate);
+    bindEvents();
+    updateSyncStatusBadge();
+    startScheduleTimer();
+
+    // 載入設定頁中的後端程式碼預覽
+    loadBackendCodeToPreview();
+  }
+
+  function getActiveObserver() {
+    if (dom.observerRoleSelect.value === '自訂') {
+      return dom.customObserverInput.value.trim() || '課堂教師';
+    }
+    return dom.observerRoleSelect.value;
+  }
+
+  function createEmptyDayRecord(caseId, date) {
+    return {
+      caseId: caseId,
+      date: date,
+      medTime: '',
+      discomfort: '',
+      periods: SCHEDULE.map(s => ({
+        name: s.name,
+        observer: '',
+        isV: false,
+        positiveCount: 0,
+        behaviors: BEHAVIORS.map(b => ({ code: b.code, name: b.name, count: 0 })),
+        antecedentTags: [],
+        consequenceTags: [],
+        contextNote: ''
+      }))
+    };
+  }
+
+  // ===================== 課表排程 =====================
   function getCurrentScheduleInfo() {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -142,50 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // ===================== 初始化函式 =====================
-  function init() {
-    renderCaseOptions();
-    dom.dateInput.value = currentDate;
-    
-    // 依據目前時間自動計算課堂節次
-    const currentSched = getCurrentScheduleInfo();
-    currentPeriodIndex = currentSched.index;
-
-    renderPeriodTabs();
-    renderBehaviorCards();
-    renderContextTags();
-    
-    // 檢查是否有儲存過當日資料
-    loadExistingRecordForDate(currentCaseId, currentDate);
-
-    bindEvents();
-    updateSyncStatusBadge();
-
-    // 啟動課表即時時鐘與跳轉監聽
-    startScheduleTimer();
-  }
-
-  function createEmptyDayRecord(caseId, date) {
-    return {
-      caseId: caseId,
-      date: date,
-      medTime: '',
-      discomfort: '',
-      periods: PERIODS.map(name => ({
-        name: name,
-        isV: false,
-        behaviors: BEHAVIORS.map(b => ({ code: b.code, name: b.name, count: 0 })),
-        contextTags: [],
-        contextNote: ''
-      }))
-    };
-  }
-
-  // ===================== 個案選擇與產生 =====================
+  // ===================== 個案選擇與管理 =====================
   function renderCaseOptions() {
     const cases = window.CaseManager.getAllCases();
     dom.caseSelect.innerHTML = '';
-    
     if (dom.analyticsCaseSelect) dom.analyticsCaseSelect.innerHTML = '';
 
     cases.forEach(c => {
@@ -210,11 +253,94 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(`已生成新個案匿名代號：【${newCase.id}】`, 'success');
   }
 
+  // ===================== 個案管理彈窗 (Modal) =====================
+  function openCaseManagerModal() {
+    renderCaseModalList();
+    dom.caseManagerModal.classList.remove('hidden');
+  }
+
+  function closeCaseManagerModal() {
+    dom.caseManagerModal.classList.add('hidden');
+    renderCaseOptions();
+  }
+
+  function renderCaseModalList() {
+    const cases = window.CaseManager.getAllCases();
+    dom.caseModalList.innerHTML = '';
+
+    if (cases.length === 0) {
+      dom.caseModalList.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">目前尚無任何個案</p>';
+      return;
+    }
+
+    cases.forEach(c => {
+      const stats = window.CaseManager.getCaseStats(c.id);
+      const isCurrent = (c.id === currentCaseId);
+
+      const div = document.createElement('div');
+      div.className = `p-3 rounded-xl border transition-all ${
+        isCurrent ? 'bg-blue-50/60 border-blue-300 ring-1 ring-blue-300' : 'bg-white border-slate-200'
+      } flex items-center justify-between gap-3`;
+
+      div.innerHTML = `
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-black text-blue-700 font-mono tracking-wider">${c.id}</span>
+            ${isCurrent ? '<span class="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.2 rounded-md">作用中</span>' : ''}
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <input type="text" value="${c.localNote || ''}" placeholder="點擊填寫本機備忘(如：個案A)" class="note-input text-xs border border-slate-200 rounded-md px-2 py-0.5 w-44 text-slate-700 focus:ring-1 focus:ring-blue-500" data-id="${c.id}">
+          </div>
+          <p class="text-[10px] text-slate-500 mt-0.5">累計紀錄：${stats.recordDays} 天 ｜ ${stats.totalBehaviors} 次行為</p>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button type="button" class="btn-select-case px-2.5 py-1 text-xs font-bold rounded-lg ${isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}" data-id="${c.id}">
+            ${isCurrent ? '使用中' : '切換'}
+          </button>
+          <button type="button" class="btn-delete-case p-1 px-2 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors" data-id="${c.id}" title="刪除個案">
+            🗑️ 刪除
+          </button>
+        </div>
+      `;
+
+      // 監聽備忘輸入
+      const noteInput = div.querySelector('.note-input');
+      noteInput.addEventListener('change', (e) => {
+        window.CaseManager.updateLocalNote(c.id, e.target.value.trim());
+        showToast(`已儲存個案 ${c.id} 之本機備忘`, 'info');
+      });
+
+      // 切換個案
+      div.querySelector('.btn-select-case').addEventListener('click', () => {
+        currentCaseId = c.id;
+        window.CaseManager.setActiveCase(currentCaseId);
+        loadExistingRecordForDate(currentCaseId, dom.dateInput.value);
+        renderCaseModalList();
+      });
+
+      // 刪除個案
+      div.querySelector('.btn-delete-case').addEventListener('click', () => {
+        const confirmDelete = confirm(`⚠️ 警告：確定要刪除個案【${c.id}】嗎？\n\n點選「確定」將自個案清單移除。\n是否同時清除該個案的歷史觀察紀錄？`);
+        if (confirmDelete) {
+          const deleteRecordsToo = confirm(`是否確定同時【永久清除】個案【${c.id}】在本機的全部歷史紀錄？`);
+          window.CaseManager.deleteCase(c.id, deleteRecordsToo);
+          currentCaseId = window.CaseManager.getActiveCaseId();
+          renderCaseModalList();
+          renderCaseOptions();
+          loadExistingRecordForDate(currentCaseId, dom.dateInput.value);
+          showToast(`已刪除個案【${c.id}】`, 'warning');
+        }
+      });
+
+      dom.caseModalList.appendChild(div);
+    });
+  }
+
   // ===================== 載入與更新既有紀錄 =====================
   function loadExistingRecordForDate(caseId, date) {
     const existing = window.GoogleSync.getRecord(caseId, date);
     if (existing) {
-      // 載入既有記錄
       dayRecord = JSON.parse(JSON.stringify(existing));
       isEditMode = true;
       dom.editModeBadge.classList.remove('hidden');
@@ -225,15 +351,12 @@ document.addEventListener('DOMContentLoaded', () => {
       dom.editModeBadge.classList.add('hidden');
     }
 
-    // 填入基本欄位
     dom.medTimeInput.value = dayRecord.medTime || '';
     dom.discomfortInput.value = dayRecord.discomfort || '';
-
-    // 更新介面
     refreshPeriodUI();
   }
 
-  // ===================== 渲染節次與按鈕 =====================
+  // ===================== 渲染節次 =====================
   function renderPeriodTabs() {
     dom.periodTabsContainer.innerHTML = '';
     const currentSched = getCurrentScheduleInfo();
@@ -242,12 +365,13 @@ document.addEventListener('DOMContentLoaded', () => {
     SCHEDULE.forEach((schedItem, idx) => {
       const isSelected = (idx === currentPeriodIndex);
       const isNowLive = (idx === currentSched.index && isToday);
+      const pData = dayRecord.periods ? dayRecord.periods[idx] : null;
 
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `period-tab px-3.5 py-2 rounded-xl font-bold text-xs transition-all whitespace-nowrap flex flex-col items-start gap-1 border select-none ${
+      btn.className = `period-tab px-3 py-1.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap flex flex-col items-start gap-0.5 border select-none ${
         isSelected
-          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 scale-[1.03]'
+          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 scale-[1.02]'
           : isNowLive
           ? 'bg-emerald-50 text-emerald-950 border-emerald-400 hover:bg-emerald-100 ring-2 ring-emerald-300'
           : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -261,17 +385,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const liveIndicator = isNowLive
         ? `<span class="inline-flex items-center gap-1 text-[10px] font-black ${isSelected ? 'text-emerald-200' : 'text-emerald-700'}">
-             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-             現在課堂
+             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>現在
            </span>`
+        : '';
+
+      const observerLabel = (pData && pData.observer)
+        ? `<span class="text-[9px] opacity-75 truncate max-w-[80px]">(${pData.observer})</span>`
         : '';
 
       btn.innerHTML = `
         <div class="flex items-center justify-between w-full gap-2">
-          <span class="text-xs font-black tracking-tight">${schedItem.name}</span>
+          <span class="text-xs font-black tracking-tight">${schedItem.name} ${observerLabel}</span>
           <div class="flex items-center gap-1">
             ${liveIndicator}
-            <span id="tabBadge_${idx}" class="text-[11px] px-1.5 py-0.5 rounded-full font-bold ${badgeClass}">0</span>
+            <span id="tabBadge_${idx}" class="text-[10px] px-1.5 py-0.2 rounded-full font-bold ${badgeClass}">0</span>
           </div>
         </div>
         <span class="text-[10px] font-medium opacity-80">${schedItem.timeStr}</span>
@@ -292,34 +419,33 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.behaviorCardsContainer.innerHTML = '';
     BEHAVIORS.forEach(b => {
       const card = document.createElement('div');
-      card.className = 'behavior-card bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-sm hover:border-blue-400 transition-all select-none active:scale-[0.99] flex flex-col justify-between';
+      card.className = 'behavior-card bg-white border-2 border-slate-200 rounded-2xl p-4 shadow-xs hover:border-blue-400 transition-all select-none active:scale-[0.99] flex flex-col justify-between';
       
       card.innerHTML = `
         <div>
           <div class="flex items-center justify-between mb-2">
-            <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl font-black ${b.badgeColor} text-white shadow-sm">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
               ${b.code}
             </span>
             <div class="flex items-center gap-1.5">
               <span id="countDisplay_${b.code}" class="text-3xl font-black text-slate-800 tracking-tight">0</span>
-              <span class="text-xs text-slate-600 font-semibold">次</span>
+              <span class="text-xs text-slate-500 font-semibold">次</span>
             </div>
           </div>
-          <h3 class="font-bold text-slate-800 text-base leading-snug mb-1">${b.name}</h3>
-          <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">${b.desc}</p>
+          <h3 class="font-bold text-slate-800 text-sm leading-snug mb-1">${b.name}</h3>
+          <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">${b.desc}</p>
         </div>
 
         <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-          <button type="button" class="btn-minus flex-1 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-sm transition-colors" data-code="${b.code}">
+          <button type="button" class="btn-minus flex-1 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs transition-colors" data-code="${b.code}">
             -1
           </button>
-          <button type="button" class="btn-plus flex-[2] py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-base shadow-md shadow-blue-500/20 active:translate-y-0.5 transition-all" data-code="${b.code}">
+          <button type="button" class="btn-plus flex-[2] py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-500/20 active:translate-y-0.5 transition-all" data-code="${b.code}">
             + 點擊記次
           </button>
         </div>
       `;
 
-      // 點擊卡片上半部也可 +1
       card.querySelector('.btn-plus').addEventListener('click', (e) => {
         e.stopPropagation();
         handleBehaviorCountChange(b.code, 1);
@@ -334,42 +460,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function renderContextTags() {
-    dom.contextTagsContainer.innerHTML = '';
-    COMMON_CONTEXT_TAGS.forEach(tag => {
+  function renderAbcTags() {
+    // 渲染 A 標籤
+    dom.antecedentTagsContainer.innerHTML = '';
+    ANTECEDENT_TAGS.forEach(tag => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'context-tag-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors';
+      btn.className = 'a-tag-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-blue-50 transition-colors';
       btn.textContent = `+ ${tag}`;
-      btn.addEventListener('click', () => {
-        toggleContextTag(tag);
-      });
-      dom.contextTagsContainer.appendChild(btn);
+      btn.addEventListener('click', () => toggleAbcTag('antecedentTags', tag));
+      dom.antecedentTagsContainer.appendChild(btn);
+    });
+
+    // 渲染 C 標籤
+    dom.consequenceTagsContainer.innerHTML = '';
+    CONSEQUENCE_TAGS.forEach(tag => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'c-tag-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-amber-50 transition-colors';
+      btn.textContent = `+ ${tag}`;
+      btn.addEventListener('click', () => toggleAbcTag('consequenceTags', tag));
+      dom.consequenceTagsContainer.appendChild(btn);
     });
   }
 
-  function toggleContextTag(tag) {
+  function toggleAbcTag(field, tag) {
     const period = dayRecord.periods[currentPeriodIndex];
-    if (!period.contextTags) period.contextTags = [];
-    
-    const idx = period.contextTags.indexOf(tag);
+    if (!period[field]) period[field] = [];
+    const idx = period[field].indexOf(tag);
     if (idx >= 0) {
-      period.contextTags.splice(idx, 1);
+      period[field].splice(idx, 1);
     } else {
-      period.contextTags.push(tag);
+      period[field].push(tag);
     }
-    refreshContextUI();
+    refreshAbcUI();
   }
 
   function refreshPeriodUI() {
     const period = dayRecord.periods[currentPeriodIndex];
     const schedItem = SCHEDULE[currentPeriodIndex];
+
     dom.currentPeriodTitle.innerHTML = `
       <span>${period.name} 行為觀察</span>
       <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
         🕒 ${schedItem.timeStr}（${schedItem.desc}）
       </span>
     `;
+
+    // 顯示記錄老師標籤
+    const currentObserver = period.observer || getActiveObserver();
+    dom.currentPeriodObserverTag.textContent = `記錄者：${currentObserver}`;
 
     // 更新各行為計數器數字
     BEHAVIORS.forEach(b => {
@@ -379,6 +519,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (countElem) countElem.textContent = count;
     });
 
+    // 更新正向行為按鈕與徽章
+    const posCount = period.positiveCount || 0;
+    dom.positiveCountBadge.textContent = `${posCount} 次`;
+
     // 更新 V 狀態
     if (period.isV) {
       dom.btnMarkV.classList.add('bg-emerald-600', 'text-white');
@@ -387,27 +531,42 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       dom.btnMarkV.classList.remove('bg-emerald-600', 'text-white');
       dom.btnMarkV.classList.add('bg-white', 'text-slate-700');
-      dom.btnMarkV.textContent = '標記本節為：V 無紀錄/常態穩定';
+      dom.btnMarkV.textContent = '標記本節為：V 常態穩定';
     }
 
-    refreshContextUI();
+    refreshAbcUI();
     updateTabBadges();
   }
 
-  function refreshContextUI() {
+  function refreshAbcUI() {
     const period = dayRecord.periods[currentPeriodIndex];
     dom.contextNoteInput.value = period.contextNote || '';
 
-    // 更新情境標籤選取狀態
-    const buttons = dom.contextTagsContainer.querySelectorAll('.context-tag-btn');
-    buttons.forEach(btn => {
+    // 更新 A 標籤選取外觀
+    const aButtons = dom.antecedentTagsContainer.querySelectorAll('.a-tag-btn');
+    aButtons.forEach(btn => {
       const tagText = btn.textContent.replace('+ ', '').replace('✓ ', '');
-      if (period.contextTags && period.contextTags.includes(tagText)) {
+      if (period.antecedentTags && period.antecedentTags.includes(tagText)) {
         btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
         btn.classList.remove('bg-slate-100', 'text-slate-700', 'border-slate-200');
         btn.textContent = `✓ ${tagText}`;
       } else {
         btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+        btn.classList.add('bg-slate-100', 'text-slate-700', 'border-slate-200');
+        btn.textContent = `+ ${tagText}`;
+      }
+    });
+
+    // 更新 C 標籤選取外觀
+    const cButtons = dom.consequenceTagsContainer.querySelectorAll('.c-tag-btn');
+    cButtons.forEach(btn => {
+      const tagText = btn.textContent.replace('+ ', '').replace('✓ ', '');
+      if (period.consequenceTags && period.consequenceTags.includes(tagText)) {
+        btn.classList.add('bg-amber-600', 'text-white', 'border-amber-600');
+        btn.classList.remove('bg-slate-100', 'text-slate-700', 'border-slate-200');
+        btn.textContent = `✓ ${tagText}`;
+      } else {
+        btn.classList.remove('bg-amber-600', 'text-white', 'border-amber-600');
         btn.classList.add('bg-slate-100', 'text-slate-700', 'border-slate-200');
         btn.textContent = `+ ${tagText}`;
       }
@@ -424,18 +583,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     item.count = Math.max(0, item.count + delta);
-
-    // 如果有了行為次數，自動取消 V
     if (item.count > 0 && period.isV) {
       period.isV = false;
     }
-
+    period.observer = getActiveObserver();
     refreshPeriodUI();
   }
 
   function saveCurrentPeriodInputs() {
     const period = dayRecord.periods[currentPeriodIndex];
     period.contextNote = dom.contextNoteInput.value.trim();
+    period.observer = getActiveObserver();
     dayRecord.medTime = dom.medTimeInput.value.trim();
     dayRecord.discomfort = dom.discomfortInput.value.trim();
   }
@@ -445,42 +603,73 @@ document.addEventListener('DOMContentLoaded', () => {
       const badge = document.getElementById(`tabBadge_${idx}`);
       if (badge) {
         const total = p.behaviors.reduce((acc, cur) => acc + (cur.count || 0), 0);
-        badge.textContent = p.isV ? 'V' : total;
+        badge.textContent = p.isV ? 'V' : (total + (p.positiveCount > 0 ? `+${p.positiveCount}` : ''));
         if (total > 0) {
-          badge.className = 'text-xs px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-bold';
+          badge.className = 'text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold';
         }
       }
     });
   }
 
-  // ===================== 儲存與更新完整日紀錄 =====================
+  // ===================== 多師協同：單節儲存與全日儲存 =====================
+  async function handleSaveSinglePeriod() {
+    saveCurrentPeriodInputs();
+    const period = dayRecord.periods[currentPeriodIndex];
+    period.observer = getActiveObserver();
+
+    window.GoogleSync.saveLocalRecord(dayRecord);
+    showToast(`正在上傳【${period.name}】(${period.observer}) 紀錄至 Google 試算表...`, 'info');
+
+    const res = await window.GoogleSync.syncSinglePeriodToGoogle(
+      currentCaseId,
+      dom.dateInput.value,
+      period,
+      dom.medTimeInput.value,
+      dom.discomfortInput.value
+    );
+
+    if (res.success) {
+      showToast(`🎉 【${period.name}】已成功獨立同步至雲端，不覆蓋其他科任老師紀錄！`, 'success');
+      renderPeriodTabs();
+    } else {
+      showToast(`本機已暫存，但雲端同步失敗 (${res.error || '離線'})`, 'warning');
+    }
+    updateSyncStatusBadge();
+  }
+
   async function handleSaveCompleteDay() {
     saveCurrentPeriodInputs();
-
     dayRecord.caseId = currentCaseId;
     dayRecord.date = dom.dateInput.value;
     dayRecord.medTime = dom.medTimeInput.value;
     dayRecord.discomfort = dom.discomfortInput.value;
 
-    // 儲存至本地快取
     window.GoogleSync.saveLocalRecord(dayRecord);
-    isEditMode = true;
-    dom.editModeBadge.classList.remove('hidden');
-    dom.editModeBadge.textContent = '✏️ 已更新儲存 (本地)';
+    showToast('已儲存全天紀錄至本機！正在同步至雲端...', 'info');
 
-    showToast('紀錄已成功儲存至本機！正在同步至雲端...', 'info');
-
-    // 嘗試同步至 Google Apps Script
     const syncRes = await window.GoogleSync.syncRecordToGoogle(dayRecord);
     if (syncRes.success) {
-      showToast('🎉 資料已成功同步更新至 Google 試算表！', 'success');
+      showToast('🎉 全日紀錄已成功合併更新至 Google 試算表！', 'success');
       dom.editModeBadge.textContent = '☁️ 雲端與本地已同步';
     } else {
-      showToast(`⚠️ 本機已儲存，但雲端同步失敗 (${syncRes.reason || '離線'})，恢復網路可手動同步。`, 'warning');
+      showToast(`⚠️ 本機已儲存，但雲端同步失敗 (${syncRes.reason || '離線'})`, 'warning');
     }
 
     updateSyncStatusBadge();
     renderHistoryTable();
+  }
+
+  async function handleFetchCloud() {
+    showToast('正在向 Google 試算表拉取最新全校/科任整合資料...', 'info');
+    const res = await window.GoogleSync.fetchCloudRecord(currentCaseId, dom.dateInput.value);
+    if (res.success && res.record) {
+      dayRecord = JSON.parse(JSON.stringify(res.record));
+      refreshPeriodUI();
+      renderPeriodTabs();
+      showToast('🎉 已成功載入雲端跨科任最新同步資料！', 'success');
+    } else {
+      showToast(res.reason || '雲端尚無此日資料', 'info');
+    }
   }
 
   // ===================== 統計與分析面板 =====================
@@ -495,29 +684,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = window.Analytics.filterRecords(allRecords, caseId, range);
     const summary = window.Analytics.computeSummary(filtered);
 
-    // 更新指標卡片
     dom.summaryTotalDays.textContent = summary.totalDays;
     dom.summaryTotalBehaviors.textContent = summary.totalBehaviors;
-    dom.summaryTopBehavior.textContent = summary.topBehavior ? `${summary.topBehavior.code} (${summary.topBehavior.count}次)` : '無';
+    dom.summaryTotalPositive.textContent = `${summary.totalPositive} 次`;
     dom.summaryTopPeriod.textContent = summary.topPeriod ? `${summary.topPeriod.period} (${summary.topPeriod.count}次)` : '無';
+
+    // ADHD 三大維度數值
+    dom.adhdInattentionCount.textContent = `${summary.adhdCategories.inattention} 次`;
+    dom.adhdHyperactivityCount.textContent = `${summary.adhdCategories.hyperactivity} 次`;
+    dom.adhdImpulsivityCount.textContent = `${summary.adhdCategories.impulsivity} 次`;
+
     dom.insightTextBox.innerHTML = `<p class="leading-relaxed font-medium text-blue-950">${summary.insightText}</p>`;
 
-    // 繪製熱區表 (Heatmap)
     renderHeatmap(summary);
-
-    // 繪製長條圖 (Chart.js)
     renderCharts(summary);
   }
 
   function renderHeatmap(summary) {
-    const codes = ['○', '+', '↑', '～', '×', '！'];
+    const codes = ['○', '+', '↑', '～', '×', '！', '★'];
     let html = `
       <table class="w-full text-xs text-center border-collapse">
         <thead>
           <tr class="bg-slate-100 text-slate-700">
             <th class="p-2 border border-slate-200">時段</th>
-            ${codes.map(c => `<th class="p-2 border border-slate-200 font-bold">${c}</th>`).join('')}
-            <th class="p-2 border border-slate-200 bg-slate-200">小計</th>
+            ${codes.map(c => `<th class="p-2 border border-slate-200 font-bold ${c === '★' ? 'text-amber-600' : ''}">${c}</th>`).join('')}
+            <th class="p-2 border border-slate-200 bg-slate-200">干擾小計</th>
           </tr>
         </thead>
         <tbody>
@@ -529,15 +720,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const val = (summary.heatmap[p] && summary.heatmap[p][c]) || 0;
         let bgClass = 'bg-white';
         let textClass = 'text-slate-400';
-        if (val >= 6) {
-          bgClass = 'bg-rose-500 text-white font-extrabold';
-          textClass = 'text-white';
-        } else if (val >= 3) {
-          bgClass = 'bg-amber-300 text-amber-950 font-bold';
-          textClass = 'text-amber-950';
-        } else if (val >= 1) {
-          bgClass = 'bg-yellow-100 text-yellow-900 font-semibold';
-          textClass = 'text-yellow-900';
+
+        if (c === '★') {
+          if (val > 0) {
+            bgClass = 'bg-amber-100 text-amber-900 font-bold';
+            textClass = 'text-amber-950';
+          }
+        } else {
+          if (val >= 6) {
+            bgClass = 'bg-rose-500 text-white font-extrabold';
+            textClass = 'text-white';
+          } else if (val >= 3) {
+            bgClass = 'bg-amber-300 text-amber-950 font-bold';
+            textClass = 'text-amber-950';
+          } else if (val >= 1) {
+            bgClass = 'bg-yellow-100 text-yellow-900 font-semibold';
+            textClass = 'text-yellow-900';
+          }
         }
         return `<td class="p-2.5 border border-slate-200 ${bgClass}"><span class="${textClass}">${val}</span></td>`;
       }).join('');
@@ -558,7 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderCharts(summary) {
     if (typeof Chart === 'undefined') return;
 
-    // 1. 行為排行榜柱狀圖
     const barCtx = document.getElementById('behaviorRankingChart');
     if (barCtx) {
       if (barChartInstance) barChartInstance.destroy();
@@ -567,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {
           labels: summary.ranking.map(r => `${r.code} ${r.name}`),
           datasets: [{
-            label: '發生次數',
+            label: '次數',
             data: summary.ranking.map(r => r.count),
             backgroundColor: summary.ranking.map(r => r.color),
             borderRadius: 6
@@ -582,7 +780,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 2. 時段分佈折線圖
     const periodCtx = document.getElementById('periodTrendChart');
     if (periodCtx) {
       if (periodChartInstance) periodChartInstance.destroy();
@@ -597,8 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backgroundColor: 'rgba(37, 99, 235, 0.1)',
             fill: true,
             tension: 0.3,
-            pointRadius: 5,
-            pointHoverRadius: 7
+            pointRadius: 4
           }]
         },
         options: {
@@ -611,13 +807,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ===================== 歷史紀錄清單 =====================
+  // ===================== 歷史紀錄 =====================
   function renderHistoryTable() {
     const allRecords = window.GoogleSync.getAllLocalRecords();
     dom.historyTableBody.innerHTML = '';
 
     if (allRecords.length === 0) {
-      dom.historyTableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-600 font-medium">尚無任何歷史觀察紀錄</td></tr>';
+      dom.historyTableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500 font-medium">尚無任何歷史觀察紀錄</td></tr>';
       return;
     }
 
@@ -626,8 +822,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition-colors';
 
       let totalCount = 0;
+      let totalPos = 0;
       (rec.periods || []).forEach(p => {
         (p.behaviors || []).forEach(b => totalCount += (b.count || 0));
+        totalPos += (p.positiveCount || 0);
       });
 
       const syncStatusTag = rec.pendingSync
@@ -636,19 +834,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       tr.innerHTML = `
         <td class="p-3 font-semibold text-slate-800">${rec.date}</td>
-        <td class="p-3 font-black text-blue-600 tracking-wider">${rec.caseId}</td>
-        <td class="p-3 text-slate-600">${rec.medTime || '無'}</td>
-        <td class="p-3 font-bold">${totalCount} 次</td>
+        <td class="p-3 font-black text-blue-600 tracking-wider font-mono">${rec.caseId}</td>
+        <td class="p-3 text-slate-500">${rec.medTime || '無'}</td>
+        <td class="p-3 font-bold text-rose-600">${totalCount} 次</td>
+        <td class="p-3 font-bold text-amber-600">${totalPos} 次</td>
         <td class="p-3">${syncStatusTag}</td>
         <td class="p-3">
           <div class="flex items-center gap-1.5">
-            <button class="btn-history-load px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors" data-case="${rec.caseId}" data-date="${rec.date}">
-              ✏️ 載入更新
+            <button class="btn-history-load px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors" data-case="${rec.caseId}" data-date="${rec.date}">
+              ✏️ 載入
             </button>
-            <button class="btn-history-word px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" data-case="${rec.caseId}" data-date="${rec.date}">
-              📄 匯出Word
+            <button class="btn-history-word px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors" data-case="${rec.caseId}" data-date="${rec.date}">
+              📄 Word
             </button>
-            <button class="btn-history-delete px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-lg transition-colors" data-case="${rec.caseId}" data-date="${rec.date}">
+            <button class="btn-history-delete px-1.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-lg transition-colors" data-case="${rec.caseId}" data-date="${rec.date}">
               🗑️
             </button>
           </div>
@@ -661,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.dateInput.value = rec.date;
         loadExistingRecordForDate(rec.caseId, rec.date);
         switchTab('view-record');
-        showToast(`已載入 ${rec.date} (${rec.caseId}) 之紀錄，可直接修改並更新！`, 'info');
+        showToast(`已載入 ${rec.date} (${rec.caseId}) 之紀錄`, 'info');
       });
 
       tr.querySelector('.btn-history-word').addEventListener('click', () => {
@@ -681,7 +880,35 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ===================== 狀態標籤與通知 =====================
+  // ===================== 課表排程定時器 =====================
+  function startScheduleTimer() {
+    function tick() {
+      const sched = getCurrentScheduleInfo();
+      if (dom.liveClockDisplay) dom.liveClockDisplay.textContent = sched.timeString;
+      if (dom.liveScheduleStatus) {
+        dom.liveScheduleStatus.textContent = sched.statusText;
+        if (sched.isClassTime) {
+          dom.liveScheduleStatus.className = 'text-xs font-black text-emerald-900 bg-emerald-100/90 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs';
+        } else {
+          dom.liveScheduleStatus.className = 'text-xs font-bold text-blue-900 bg-white/90 px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs';
+        }
+      }
+
+      const isToday = (dom.dateInput.value === new Date().toISOString().split('T')[0]);
+      if (isToday && dom.autoTimeJumpCheckbox && dom.autoTimeJumpCheckbox.checked) {
+        if (currentPeriodIndex !== sched.index) {
+          saveCurrentPeriodInputs();
+          currentPeriodIndex = sched.index;
+          renderPeriodTabs();
+          refreshPeriodUI();
+          showToast(`⏰ 課表時間進入【${sched.schedule.name}】(${sched.schedule.timeStr})，已自動切換！`, 'info');
+        }
+      }
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
   function updateSyncStatusBadge() {
     const all = window.GoogleSync.getAllLocalRecords();
     const pending = all.filter(r => r.pendingSync).length;
@@ -689,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dom.syncBadge.textContent = `待同步: ${pending}`;
       dom.syncBadge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-700';
     } else {
-      dom.syncBadge.textContent = '已同步至雲端';
+      dom.syncBadge.textContent = '已同步';
       dom.syncBadge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700';
     }
   }
@@ -702,14 +929,11 @@ document.addEventListener('DOMContentLoaded', () => {
       warning: 'bg-amber-600 text-white',
       info: 'bg-slate-900 text-white'
     };
-    toast.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-xl font-semibold text-sm z-50 transition-all transform duration-300 translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+    toast.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-xl font-semibold text-xs z-50 transition-all transform duration-300 translate-y-2 opacity-0 ${colors[type] || colors.info}`;
     toast.textContent = msg;
     document.body.appendChild(toast);
 
-    requestAnimationFrame(() => {
-      toast.classList.remove('translate-y-2', 'opacity-0');
-    });
-
+    requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
     setTimeout(() => {
       toast.classList.add('opacity-0', 'translate-y-2');
       setTimeout(() => toast.remove(), 300);
@@ -728,28 +952,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     dom.viewSections.forEach(s => {
-      if (s.id === targetId) {
-        s.classList.remove('hidden');
-      } else {
-        s.classList.add('hidden');
-      }
+      if (s.id === targetId) s.classList.remove('hidden');
+      else s.classList.add('hidden');
     });
 
-    if (targetId === 'view-analytics') {
-      loadAnalytics();
-    } else if (targetId === 'view-history') {
-      renderHistoryTable();
-    }
+    if (targetId === 'view-analytics') loadAnalytics();
+    else if (targetId === 'view-history') renderHistoryTable();
+  }
+
+  // 載入後端程式碼至設定頁預覽
+  function loadBackendCodeToPreview() {
+    fetch('google-apps-script/Code.gs')
+      .then(res => res.text())
+      .then(text => {
+        if (dom.backendCodeTextarea) dom.backendCodeTextarea.value = text;
+      })
+      .catch(err => {
+        if (dom.backendCodeTextarea) {
+          dom.backendCodeTextarea.value = '// 請至專案目錄 google-apps-script/Code.gs 複製完整程式碼';
+        }
+      });
   }
 
   // ===================== 事件綁定 =====================
   function bindEvents() {
-    // 頁籤切換
     dom.navTabs.forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.target));
     });
 
-    // 個案切換與產生
+    // 老師稱謂切換
+    dom.observerRoleSelect.addEventListener('change', (e) => {
+      if (e.target.value === '自訂') {
+        dom.customObserverInput.classList.remove('hidden');
+        dom.customObserverInput.focus();
+      } else {
+        dom.customObserverInput.classList.add('hidden');
+        window.GoogleSync.setObserverRole(e.target.value);
+        showToast(`已設定目前記錄者身分：【${e.target.value}】`, 'info');
+      }
+      refreshPeriodUI();
+    });
+
+    dom.customObserverInput.addEventListener('change', (e) => {
+      window.GoogleSync.setObserverRole(e.target.value.trim());
+      showToast(`已儲存自訂記錄身分：【${e.target.value}】`, 'info');
+      refreshPeriodUI();
+    });
+
+    // 個案切換與彈窗
     dom.caseSelect.addEventListener('change', (e) => {
       currentCaseId = e.target.value;
       window.CaseManager.setActiveCase(currentCaseId);
@@ -757,15 +1007,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     dom.btnNewCase.addEventListener('click', handleCreateNewCase);
+    dom.btnManageCases.addEventListener('click', openCaseManagerModal);
+    dom.btnCloseCaseModal.addEventListener('click', closeCaseManagerModal);
+    dom.btnModalClose.addEventListener('click', closeCaseManagerModal);
+    dom.btnModalAddNewCase.addEventListener('click', handleCreateNewCase);
 
-    dom.btnCopyCaseId.addEventListener('click', () => {
-      navigator.clipboard.writeText(currentCaseId);
-      showToast(`已複製個案代號：${currentCaseId}`, 'info');
-    });
+    // 雲端拉取
+    dom.btnFetchCloud.addEventListener('click', handleFetchCloud);
 
     // 日期變更
     dom.dateInput.addEventListener('change', (e) => {
       loadExistingRecordForDate(currentCaseId, e.target.value);
+    });
+
+    // 正向良好行為加分按鈕
+    dom.btnPositiveBehavior.addEventListener('click', () => {
+      const period = dayRecord.periods[currentPeriodIndex];
+      period.positiveCount = (period.positiveCount || 0) + 1;
+      period.observer = getActiveObserver();
+      refreshPeriodUI();
+      showToast(`★ 正向良好適應行為 +1 (本節累計 ${period.positiveCount} 次)`, 'success');
     });
 
     // 標記 V (無紀錄/常態)
@@ -773,22 +1034,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const period = dayRecord.periods[currentPeriodIndex];
       period.isV = !period.isV;
       if (period.isV) {
-        // 清空該節行為次數
         period.behaviors.forEach(b => b.count = 0);
       }
+      period.observer = getActiveObserver();
       refreshPeriodUI();
     });
 
-    // 儲存日紀錄
+    // 儲存操作
+    dom.btnSaveSinglePeriod.addEventListener('click', handleSaveSinglePeriod);
     dom.btnSaveDay.addEventListener('click', handleSaveCompleteDay);
 
-    // 重設本節
+    // 清空本節
     dom.btnResetPeriod.addEventListener('click', () => {
       if (confirm(`確定要清空【${PERIODS[currentPeriodIndex]}】的紀錄嗎？`)) {
         const period = dayRecord.periods[currentPeriodIndex];
         period.isV = false;
+        period.positiveCount = 0;
         period.behaviors.forEach(b => b.count = 0);
-        period.contextTags = [];
+        period.antecedentTags = [];
+        period.consequenceTags = [];
         period.contextNote = '';
         refreshPeriodUI();
       }
@@ -802,12 +1066,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 統計頁篩選切換
-    if (dom.analyticsCaseSelect) {
-      dom.analyticsCaseSelect.addEventListener('change', loadAnalytics);
-    }
-    if (dom.analyticsRangeSelect) {
-      dom.analyticsRangeSelect.addEventListener('change', loadAnalytics);
-    }
+    if (dom.analyticsCaseSelect) dom.analyticsCaseSelect.addEventListener('change', loadAnalytics);
+    if (dom.analyticsRangeSelect) dom.analyticsRangeSelect.addEventListener('change', loadAnalytics);
 
     // 匯出累計 Word
     dom.btnExportWeeklyWord.addEventListener('click', () => {
@@ -821,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.DocxExport.exportWeeklyOrCumulativeWord(caseId, rangeLabels[range] || range, summary);
     });
 
-    // 批次同步所有待同步資料
+    // 批次同步
     dom.btnSyncAll.addEventListener('click', async () => {
       dom.btnSyncAll.disabled = true;
       dom.btnSyncAll.textContent = '⏳ 同步處理中...';
@@ -833,14 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderHistoryTable();
     });
 
-    // 設定頁面 GAS URL
-    dom.apiUrlInput.value = window.GoogleSync.getApiUrl();
-    dom.btnSaveApiUrl.addEventListener('click', () => {
-      window.GoogleSync.setApiUrl(dom.apiUrlInput.value);
-      showToast('Google 試算表 Web App 網址已儲存！', 'success');
-    });
-
-    // 課表跳轉與定時器控制
+    // 課表跳轉控制
     if (dom.btnJumpToCurrentPeriod) {
       dom.btnJumpToCurrentPeriod.addEventListener('click', () => {
         const sched = getCurrentScheduleInfo();
@@ -852,56 +1105,33 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    if (dom.autoTimeJumpCheckbox) {
-      dom.autoTimeJumpCheckbox.addEventListener('change', (e) => {
-        if (e.target.checked) {
-          showToast('已開啟「自動依課表跳轉」', 'info');
-          const sched = getCurrentScheduleInfo();
-          if (dom.dateInput.value === new Date().toISOString().split('T')[0]) {
-            currentPeriodIndex = sched.index;
-            renderPeriodTabs();
-            refreshPeriodUI();
-          }
-        } else {
-          showToast('已暫停自動跳轉，可手動停留在任何節次', 'info');
-        }
+    // 設定頁面 GAS URL
+    dom.apiUrlInput.value = window.GoogleSync.getApiUrl();
+    dom.btnSaveApiUrl.addEventListener('click', () => {
+      window.GoogleSync.setApiUrl(dom.apiUrlInput.value);
+      showToast('Google 試算表 Web App 網址已儲存！', 'success');
+    });
+
+    dom.btnTestApi.addEventListener('click', async () => {
+      dom.apiTestResult.textContent = '連線測試中...';
+      try {
+        const res = await window.GoogleSync.testConnection(dom.apiUrlInput.value);
+        dom.apiTestResult.textContent = `✅ 連線成功！伺服器回應：${JSON.stringify(res)}`;
+        dom.apiTestResult.className = 'text-xs text-emerald-600 font-semibold mt-2';
+      } catch (err) {
+        dom.apiTestResult.textContent = `❌ 連線失敗：${err.message}`;
+        dom.apiTestResult.className = 'text-xs text-rose-600 font-semibold mt-2';
+      }
+    });
+
+    // 一鍵複製後端 Code.gs
+    if (dom.btnCopyBackendCode && dom.backendCodeTextarea) {
+      dom.btnCopyBackendCode.addEventListener('click', () => {
+        navigator.clipboard.writeText(dom.backendCodeTextarea.value);
+        showToast('📋 已複製後端 Code.gs 完整程式碼！可直接到 Google Apps Script 貼上', 'success');
       });
     }
   }
 
-  // ===================== 課表即時監聽與自動跳轉 =====================
-  function startScheduleTimer() {
-    function tick() {
-      const sched = getCurrentScheduleInfo();
-      if (dom.liveClockDisplay) {
-        dom.liveClockDisplay.textContent = sched.timeString;
-      }
-      if (dom.liveScheduleStatus) {
-        dom.liveScheduleStatus.textContent = sched.statusText;
-        if (sched.isClassTime) {
-          dom.liveScheduleStatus.className = 'text-xs font-black text-emerald-900 bg-emerald-100/90 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs';
-        } else {
-          dom.liveScheduleStatus.className = 'text-xs font-bold text-blue-900 bg-white/90 px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs';
-        }
-      }
-
-      // 若目前選擇的日期是「今天」，且使用者開啟了「自動依課表跳轉」
-      const isToday = (dom.dateInput.value === new Date().toISOString().split('T')[0]);
-      if (isToday && dom.autoTimeJumpCheckbox && dom.autoTimeJumpCheckbox.checked) {
-        if (currentPeriodIndex !== sched.index) {
-          saveCurrentPeriodInputs();
-          currentPeriodIndex = sched.index;
-          renderPeriodTabs();
-          refreshPeriodUI();
-          showToast(`⏰ 課表時間進入【${sched.schedule.name}】(${sched.schedule.timeStr})，已自動切換！`, 'info');
-        }
-      }
-    }
-
-    tick();
-    setInterval(tick, 1000);
-  }
-
-  // 啟動
   init();
 });

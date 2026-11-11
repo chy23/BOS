@@ -117,14 +117,50 @@ class CaseManager {
 
   /**
    * 刪除個案
+   * @param {string} caseId - 目標個案代號
+   * @param {boolean} deleteRecords - 是否連帶刪除該個案的歷史觀察紀錄
    */
-  deleteCase(caseId) {
+  deleteCase(caseId, deleteRecords = false) {
     let cases = this.getAllCases();
     cases = cases.filter(c => c.id !== caseId);
     localStorage.setItem(this.storageKey, JSON.stringify(cases));
+
+    if (deleteRecords && window.GoogleSync) {
+      let records = window.GoogleSync.getAllLocalRecords();
+      records = records.filter(r => r.caseId !== caseId);
+      localStorage.setItem(window.GoogleSync.storageKey, JSON.stringify(records));
+    }
+
+    // 若刪除的是當前個案，重設作用中個案
     if (this.getActiveCaseId() === caseId) {
       localStorage.removeItem(this.activeCaseKey);
+      if (cases.length > 0) {
+        this.setActiveCase(cases[0].id);
+      } else {
+        const next = this.createCase();
+        this.setActiveCase(next.id);
+      }
     }
+  }
+
+  /**
+   * 取得個案詳細資訊 (包含歷史紀錄天數與筆數)
+   */
+  getCaseStats(caseId) {
+    const allRecords = window.GoogleSync ? window.GoogleSync.getAllLocalRecords() : [];
+    const caseRecords = allRecords.filter(r => r.caseId === caseId);
+    let totalBehaviors = 0;
+    caseRecords.forEach(r => {
+      (r.periods || []).forEach(p => {
+        (p.behaviors || []).forEach(b => totalBehaviors += (b.count || 0));
+      });
+    });
+
+    return {
+      recordDays: caseRecords.length,
+      totalBehaviors: totalBehaviors,
+      lastObservedDate: caseRecords[0] ? caseRecords[0].date : '尚未記錄'
+    };
   }
 }
 

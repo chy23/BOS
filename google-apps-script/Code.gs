@@ -1,17 +1,14 @@
 /**
  * 行為觀察紀錄系統 (Behavior Observation System - BOS)
- * Google Apps Script 後端處理程式
+ * Google Apps Script 後端處理程式 (支援多科任老師跨載具共同記錄)
  * 
- * 部署說明：
- * 1. 在 Google 試算表中，點擊「擴充功能」 -> 「Apps Script」
- * 2. 將此程式碼完整貼上取代原有內容
- * 3. 點選「部署」 -> 「新建部署」 -> 選擇類型「網頁應用程式 (Web App)」
- * 4. 存取權限設定為「所有人 (Anyone)」
- * 5. 複製生成的 Web 應用程式網址，填入 BOS 網頁系統的設定中
+ * 特色：
+ * 1. 支援多位老師（導師、科任老師）協同記錄：依 [個案 + 日期 + 節次] 智慧合併，不覆蓋其他老師的節次。
+ * 2. 嚴格個資去識別化：僅儲存 3 碼亂碼代號，不記錄任何真實姓名或身分個資。
+ * 3. 支援 A-B-C 行為脈絡 (前置前事、行為代號、後續後果) 與正向良好行為紀錄。
  */
 
 const SHEET_NAME_RAW = "行為原始紀錄";
-const SHEET_NAME_DAILY = "當日統計彙整";
 const SHEET_NAME_CASES = "個案代號清單";
 
 function doGet(e) {
@@ -22,6 +19,8 @@ function doGet(e) {
     return handleListCases();
   } else if (action === "getRecord") {
     return handleGetRecord(params.caseId, params.date);
+  } else if (action === "ping") {
+    return jsonResponse({ status: "success", message: "BOS 雲端服務正常連線中", timestamp: new Date().toISOString() });
   }
   
   return jsonResponse({ status: "success", message: "BOS Google Apps Script API 正常運作中" });
@@ -34,7 +33,9 @@ function doPost(e) {
 
     if (action === "upsert") {
       return handleUpsertRecord(data);
-    } else if (action === "delete") {
+    } else if (action === "deleteCase") {
+      return handleDeleteCase(data.caseId);
+    } else if (action === "deleteRecord") {
       return handleDeleteRecord(data.caseId, data.date);
     }
 
@@ -45,45 +46,57 @@ function doPost(e) {
 }
 
 /**
- * 新增或更新紀錄 (Upsert: 若已有該個案該日期的資料則更新，無則新增)
+ * 新增或更新紀錄 (支援單節更新或全日合併，避免多位老師相互覆蓋)
  */
 function handleUpsertRecord(payload) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const rawSheet = getOrCreateSheet(ss, SHEET_NAME_RAW, [
     "更新時間戳記", "個案代號", "日期", "用藥時間", "身體不適紀錄",
-    "節次", "行為代號", "行為名稱", "次數", "情境標籤", "情境細節備註"
+    "節次", "記錄老師/角色", "行為代號", "行為名稱", "次數",
+    "前事脈絡(A)", "後果反應(C)", "詳細情境備註", "正向行為次數"
   ]);
 
   const caseId = payload.caseId;
   const date = payload.date;
-  const medTime = payload.medTime || "未填寫/無用藥";
+  const medTime = payload.medTime || "未記錄";
   const discomfort = payload.discomfort || "無特殊狀況";
-  const periods = payload.periods || []; // 9 個節次陣列
+  const observer = payload.observer || "課堂教師";
+  const periods = payload.periods || []; // 節次資料陣列
   const timestamp = new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" });
 
-  // 1. 先刪除舊有的同個案、同日期記錄（若存在）
-  deleteExistingRows(rawSheet, caseId, date);
+  // 取得本次要寫入的節次名稱清單 (例如若科任只送第三節，只刪除該節舊紀錄)
+  const targetPeriodNames = periods.map(p => p.name);
+
+  // 1. 僅刪除「同個案 + 同日期 + 本次有更新的節次」之舊紀錄，保留其他科任老師的節次紀錄
+  deleteTargetPeriodRows(rawSheet, caseId, date, targetPeriodNames);
 
   // 2. 插入新的列資料
   const rowsToInsert = [];
   periods.forEach(function(period) {
     const periodName = period.name;
-    const contextTags = (period.contextTags || []).join(", ");
+    const periodObserver = period.observer || observer;
+    const antecedentTags = (period.antecedentTags || []).join(", ");
+    const consequenceTags = (period.consequenceTags || []).join(", ");
     const contextNote = period.contextNote || "";
+    const positiveCount = Number(period.positiveCount || 0);
     const behaviors = period.behaviors || [];
 
-    if (behaviors.length === 0) {
-      // 若該節無特定行為或標記為 V
+    if (behaviors.length === 0 || period.isV) {
+      // 標記為 V (無干擾常態)
       rowsToInsert.push([
         timestamp, caseId, date, medTime, discomfort,
-        periodName, "V", "無紀錄/常態", 0, contextTags, contextNote
+        periodName, periodObserver, "V", "常態穩定/無干擾", 0,
+        antecedentTags, consequenceTags, contextNote, positiveCount
       ]);
     } else {
       behaviors.forEach(function(b) {
-        rowsToInsert.push([
-          timestamp, caseId, date, medTime, discomfort,
-          periodName, b.code, b.name, b.count, contextTags, contextNote
-        ]);
+        if (b.count > 0 || behaviors.length === 1) {
+          rowsToInsert.push([
+            timestamp, caseId, date, medTime, discomfort,
+            periodName, periodObserver, b.code, b.name, Number(b.count || 0),
+            antecedentTags, consequenceTags, contextNote, positiveCount
+          ]);
+        }
       });
     }
   });
@@ -93,21 +106,22 @@ function handleUpsertRecord(payload) {
             .setValues(rowsToInsert);
   }
 
-  // 3. 確保個案清單有此代號（純匿名代號）
+  // 3. 確保個案清單有此代號
   recordCaseId(ss, caseId);
 
   return jsonResponse({
     status: "success",
-    message: "紀錄已成功儲存/更新至雲端試算表",
+    message: "紀錄已成功合併儲存至雲端試算表",
     caseId: caseId,
     date: date,
+    updatedPeriods: targetPeriodNames,
     rowsCount: rowsToInsert.length,
     updatedAt: timestamp
   });
 }
 
 /**
- * 讀取特定個案特定日期的紀錄
+ * 讀取特定個案特定日期的合併全天紀錄 (供跨老師即時同步載入)
  */
 function handleGetRecord(caseId, date) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -121,29 +135,57 @@ function handleGetRecord(caseId, date) {
     return jsonResponse({ status: "success", record: null });
   }
 
-  const resultRows = [];
+  const periodMap = {};
   let medTime = "";
   let discomfort = "";
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (String(row[1]) === String(caseId) && String(row[2]) === String(date)) {
-      medTime = row[3];
-      discomfort = row[4];
-      resultRows.push({
-        periodName: row[5],
-        code: row[6],
-        name: row[7],
-        count: Number(row[8]),
-        contextTags: row[9] ? String(row[9]).split(", ") : [],
-        contextNote: row[10] || ""
-      });
+      if (row[3] && row[3] !== "未記錄") medTime = row[3];
+      if (row[4] && row[4] !== "無特殊狀況") discomfort = row[4];
+
+      const periodName = String(row[5]);
+      if (!periodMap[periodName]) {
+        periodMap[periodName] = {
+          name: periodName,
+          observer: String(row[6] || ""),
+          isV: String(row[7]) === "V",
+          behaviors: [],
+          antecedentTags: row[10] ? String(row[10]).split(", ") : [],
+          consequenceTags: row[11] ? String(row[11]).split(", ") : [],
+          contextNote: String(row[12] || ""),
+          positiveCount: Number(row[13] || 0)
+        };
+      }
+
+      if (row[7] && row[7] !== "V") {
+        periodMap[periodName].behaviors.push({
+          code: String(row[7]),
+          name: String(row[8]),
+          count: Number(row[9])
+        });
+      }
     }
   }
 
-  if (resultRows.length === 0) {
-    return jsonResponse({ status: "success", record: null });
-  }
+  const periodNames = [
+    "早自習", "第一節", "第二節", "第三節", "第四節",
+    "中午", "第五節", "第六節", "第七節"
+  ];
+
+  const periodsArray = periodNames.map(function(pName) {
+    return periodMap[pName] || {
+      name: pName,
+      observer: "",
+      isV: false,
+      behaviors: [],
+      antecedentTags: [],
+      consequenceTags: [],
+      contextNote: "",
+      positiveCount: 0
+    };
+  });
 
   return jsonResponse({
     status: "success",
@@ -152,9 +194,44 @@ function handleGetRecord(caseId, date) {
       date: date,
       medTime: medTime,
       discomfort: discomfort,
-      items: resultRows
+      periods: periodsArray
     }
   });
+}
+
+/**
+ * 刪除指定節次的舊紀錄 (支援特定節次更新)
+ */
+function deleteTargetPeriodRows(sheet, caseId, date, targetPeriodNames) {
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return;
+
+  for (let i = data.length - 1; i >= 1; i--) {
+    const rCase = String(data[i][1]);
+    const rDate = String(data[i][2]);
+    const rPeriod = String(data[i][5]);
+
+    if (rCase === String(caseId) && rDate === String(date) && targetPeriodNames.includes(rPeriod)) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+}
+
+/**
+ * 刪除個案
+ */
+function handleDeleteCase(caseId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const caseSheet = ss.getSheetByName(SHEET_NAME_CASES);
+  if (caseSheet) {
+    const data = caseSheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][0]) === String(caseId)) {
+        caseSheet.deleteRow(i + 1);
+      }
+    }
+  }
+  return jsonResponse({ status: "success", message: "個案已從雲端清單中移除" });
 }
 
 /**
@@ -163,32 +240,14 @@ function handleGetRecord(caseId, date) {
 function handleListCases() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const caseSheet = ss.getSheetByName(SHEET_NAME_CASES);
-  if (!caseSheet) {
-    return jsonResponse({ status: "success", cases: [] });
-  }
+  if (!caseSheet) return jsonResponse({ status: "success", cases: [] });
 
   const data = caseSheet.getDataRange().getValues();
   const cases = [];
   for (let i = 1; i < data.length; i++) {
     if (data[i][0]) cases.push(String(data[i][0]));
   }
-
   return jsonResponse({ status: "success", cases: cases });
-}
-
-/**
- * 刪除現有紀錄
- */
-function deleteExistingRows(sheet, caseId, date) {
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return;
-
-  // 從後往前刪除，避免 index 錯位
-  for (let i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][1]) === String(caseId) && String(data[i][2]) === String(date)) {
-      sheet.deleteRow(i + 1);
-    }
-  }
 }
 
 /**

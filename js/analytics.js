@@ -1,17 +1,21 @@
 /**
  * Analytics: 負責當日、當週與長期累計時段分佈分析
- * 包含行為排行、時段熱區 (Heatmap)、用藥關聯與自然語言摘要
+ * 升級功能：
+ * 1. 融入 ADHD 臨床三大核心面向 (注意力不足、過動、衝動) 與正向良好行為統計
+ * 2. 結合 A-B-C 行為前事與後果脈絡聚合
+ * 3. 支援跨科任老師觀察數據匯流分析
  */
 class Analytics {
   constructor() {
     this.behaviorCodes = [
-      { code: '○', name: '玩文具、雜物、桌椅', color: '#3B82F6' },
-      { code: '+', name: '放空、發呆', color: '#10B981' },
-      { code: '↑', name: '尋找東西、遺失物', color: '#F59E0B' },
-      { code: '～', name: '扭、抖動身體', color: '#8B5CF6' },
-      { code: '×', name: '以動作、講話干擾附近人', color: '#EF4444' },
-      { code: '！', name: '未舉手發言、搶話', color: '#EC4899' },
-      { code: 'V', name: '無紀錄/常態良好', color: '#6B7280' }
+      { code: '○', name: '玩文具、雜物、桌椅', category: '注意力不足 (Inattention)', color: '#3B82F6' },
+      { code: '+', name: '放空、發呆', category: '注意力不足 (Inattention)', color: '#10B981' },
+      { code: '↑', name: '尋找東西、遺失物', category: '注意力不足 (Inattention)', color: '#F59E0B' },
+      { code: '～', name: '扭、抖動身體', category: '過動現象 (Hyperactivity)', color: '#8B5CF6' },
+      { code: '×', name: '以動作、講話干擾附近人', category: '衝動控制 (Impulsivity)', color: '#EF4444' },
+      { code: '！', name: '未舉手發言、搶話', category: '衝動控制 (Impulsivity)', color: '#EC4899' },
+      { code: '★', name: '正向良好適應行為', category: '正向行為 (Positive)', color: '#F59E0B' },
+      { code: 'V', name: '無紀錄/常態良好', category: '常態穩定', color: '#6B7280' }
     ];
 
     this.periods = [
@@ -20,26 +24,17 @@ class Analytics {
     ];
   }
 
-  /**
-   * 依個案與日期範圍篩選記錄
-   * @param {Array} allRecords - 全部原始日紀錄
-   * @param {string} caseId - 個案代號
-   * @param {string} filterType - 'today' | 'week' | 'all' | 'custom'
-   * @param {Object} customRange - { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }
-   */
   filterRecords(allRecords, caseId, filterType = 'today', customRange = null) {
     if (!allRecords || allRecords.length === 0) return [];
 
     let filtered = allRecords.filter(r => r.caseId === caseId);
-
     const todayStr = new Date().toISOString().split('T')[0];
 
     if (filterType === 'today') {
       filtered = filtered.filter(r => r.date === todayStr);
     } else if (filterType === 'week') {
-      // 取得過去 7 天或是本週（週一到週日）
       const now = new Date();
-      const day = now.getDay() || 7; // 週一為 1，週日為 7
+      const day = now.getDay() || 7;
       const monday = new Date(now);
       monday.setDate(now.getDate() - day + 1);
       monday.setHours(0, 0, 0, 0);
@@ -59,32 +54,33 @@ class Analytics {
     return filtered;
   }
 
-  /**
-   * 彙整核心分析結果
-   */
   computeSummary(records) {
     if (!records || records.length === 0) {
       return {
         totalDays: 0,
         totalBehaviors: 0,
+        totalPositive: 0,
         ranking: [],
         periodTotals: {},
         heatmap: {},
         topBehavior: null,
         topPeriod: null,
-        contextWordCloud: {},
+        adhdCategories: { inattention: 0, hyperactivity: 0, impulsivity: 0, positive: 0 },
+        antecedentCounts: {},
+        consequenceCounts: {},
         insightText: '目前選取範圍尚無觀察紀錄。'
       };
     }
 
     const totalDays = records.length;
     let totalBehaviors = 0;
+    let totalPositive = 0;
     const countByCode = {};
     const countByPeriod = {};
-    const heatmap = {}; // { period: { code: count } }
-    const contextCounter = {};
+    const heatmap = {};
+    const antecedentCounts = {};
+    const consequenceCounts = {};
 
-    // 初始化
     this.behaviorCodes.forEach(b => {
       if (b.code !== 'V') countByCode[b.code] = 0;
     });
@@ -97,14 +93,21 @@ class Analytics {
       });
     });
 
-    // 歷遍紀錄
     records.forEach(rec => {
       (rec.periods || []).forEach(p => {
         const periodName = p.name;
-        // 統計情境標籤
-        (p.contextTags || []).forEach(tag => {
-          contextCounter[tag] = (contextCounter[tag] || 0) + 1;
-        });
+        
+        // 正向行為次數
+        const pos = Number(p.positiveCount || 0);
+        totalPositive += pos;
+        countByCode['★'] = (countByCode['★'] || 0) + pos;
+        if (heatmap[periodName]) {
+          heatmap[periodName]['★'] = (heatmap[periodName]['★'] || 0) + pos;
+        }
+
+        // A-B-C 前事與後果統計
+        (p.antecedentTags || []).forEach(t => antecedentCounts[t] = (antecedentCounts[t] || 0) + 1);
+        (p.consequenceTags || []).forEach(t => consequenceCounts[t] = (consequenceCounts[t] || 0) + 1);
 
         (p.behaviors || []).forEach(b => {
           if (b.code && b.code !== 'V' && b.count > 0) {
@@ -119,15 +122,24 @@ class Analytics {
       });
     });
 
-    // 計算排行
+    // ADHD 三大面向分類加總
+    const adhdCategories = {
+      inattention: (countByCode['○'] || 0) + (countByCode['+'] || 0) + (countByCode['↑'] || 0),
+      hyperactivity: (countByCode['～'] || 0),
+      impulsivity: (countByCode['×'] || 0) + (countByCode['！'] || 0),
+      positive: totalPositive
+    };
+
+    // 排行榜 (排除常態 V 與正向 ★)
     const ranking = this.behaviorCodes
-      .filter(b => b.code !== 'V')
+      .filter(b => b.code !== 'V' && b.code !== '★')
       .map(b => {
         const count = countByCode[b.code] || 0;
         const percentage = totalBehaviors > 0 ? ((count / totalBehaviors) * 100).toFixed(1) : 0;
         return {
           code: b.code,
           name: b.name,
+          category: b.category,
           color: b.color,
           count: count,
           percentage: Number(percentage)
@@ -135,7 +147,6 @@ class Analytics {
       })
       .sort((a, b) => b.count - a.count);
 
-    // 計算時段排行
     const periodRanking = Object.keys(countByPeriod).map(p => ({
       period: p,
       count: countByPeriod[p]
@@ -144,32 +155,33 @@ class Analytics {
     const topBehavior = ranking[0]?.count > 0 ? ranking[0] : null;
     const topPeriod = periodRanking[0]?.count > 0 ? periodRanking[0] : null;
 
-    // 產生客觀文本摘要
+    // 產生臨床與教學分析結論
     let insightText = '';
     if (totalBehaviors === 0) {
-      insightText = `在選取的 ${totalDays} 天觀察中，該個案未出現明顯干擾或分心行為，課堂表現穩定。`;
+      insightText = `在選取的 ${totalDays} 天觀察中，該個案整體課堂表現穩定，未出現顯著干擾或分心行為，並累計展現 ${totalPositive} 次正向良好適應行為。`;
     } else {
-      const topContexts = Object.entries(contextCounter)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(e => e[0]);
+      const topAntecedents = Object.entries(antecedentCounts).sort((a,b) => b[1]-a[1]).slice(0, 2).map(e => e[0]);
+      const triggerDesc = topAntecedents.length > 0 ? `；常見觸發前置事件(A)為【${topAntecedents.join('、')}】` : '';
+      
+      const dominantCategory = 
+        (adhdCategories.inattention >= adhdCategories.hyperactivity && adhdCategories.inattention >= adhdCategories.impulsivity) ? '注意力維持困難 (佔最大比重)' :
+        (adhdCategories.hyperactivity >= adhdCategories.impulsivity) ? '身體活動量偏高 (過動特徵顯著)' : '衝動抑制控制弱 (搶話與干擾同儕)';
 
-      const contextDesc = topContexts.length > 0 
-        ? `，常伴隨之課堂情境以【${topContexts.join('、')}】為主` 
-        : '';
-
-      insightText = `在選取的 ${totalDays} 天共記錄 ${totalBehaviors} 次行為。其中出現頻率最高為「${topBehavior.code} ${topBehavior.name}」（共 ${topBehavior.count} 次，佔比 ${topBehavior.percentage}%）；時段分佈最密集於「${topPeriod.period}」（累計 ${topPeriod.count} 次）${contextDesc}。`;
+      insightText = `選取的 ${totalDays} 天共記錄 ${totalBehaviors} 次目標行為。頻率最高為「${topBehavior.code} ${topBehavior.name}」（共 ${topBehavior.count} 次，佔比 ${topBehavior.percentage}%）；密集時段落在「${topPeriod.period}」（累計 ${topPeriod.count} 次）。依 ADHD 三面向評估以【${dominantCategory}】為主${triggerDesc}。期間觀察到 ${totalPositive} 次正向行為，建議以此作為代幣增強之切入點。`;
     }
 
     return {
       totalDays,
       totalBehaviors,
+      totalPositive,
       ranking,
       periodTotals: countByPeriod,
       heatmap,
       topBehavior,
       topPeriod,
-      contextCounter,
+      adhdCategories,
+      antecedentCounts,
+      consequenceCounts,
       insightText
     };
   }

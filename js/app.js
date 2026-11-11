@@ -731,14 +731,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderHeatmap(summary) {
-    const codes = ['○', '+', '↑', '～', '×', '！', '★'];
+    const columns = [
+      { code: '○', label: '玩文具雜物', icon: '✏️' },
+      { code: '+', label: '放空發呆', icon: '💭' },
+      { code: '↑', label: '尋找遺失物', icon: '🔍' },
+      { code: '～', label: '扭動身體', icon: '🦵' },
+      { code: '×', label: '干擾他人', icon: '🗣️' },
+      { code: '！', label: '未舉手搶話', icon: '📢' },
+      { code: '★', label: '正向好行為', icon: '★' }
+    ];
+
     let html = `
       <table class="w-full text-xs text-center border-collapse">
         <thead>
-          <tr class="bg-slate-100 text-slate-700">
-            <th class="p-2 border border-slate-200">時段</th>
-            ${codes.map(c => `<th class="p-2 border border-slate-200 font-bold ${c === '★' ? 'text-amber-600' : ''}">${c}</th>`).join('')}
-            <th class="p-2 border border-slate-200 bg-slate-200">干擾小計</th>
+          <tr class="bg-slate-100 text-slate-800">
+            <th class="p-2.5 border border-slate-200 font-bold whitespace-nowrap">時段</th>
+            ${columns.map(c => `
+              <th class="p-2.5 border border-slate-200 font-black whitespace-nowrap ${c.code === '★' ? 'text-amber-800 bg-amber-50/70' : 'text-slate-800'}">
+                <div class="flex items-center justify-center gap-1">
+                  <span>${c.icon}</span>
+                  <span>${c.label}</span>
+                </div>
+              </th>
+            `).join('')}
+            <th class="p-2.5 border border-slate-200 font-black bg-slate-200 whitespace-nowrap">干擾小計</th>
           </tr>
         </thead>
         <tbody>
@@ -746,7 +762,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     PERIODS.forEach(p => {
       const pTotal = summary.periodTotals[p] || 0;
-      let cols = codes.map(c => {
+      let cols = columns.map(col => {
+        const c = col.code;
         const val = (summary.heatmap[p] && summary.heatmap[p][c]) || 0;
         let bgClass = 'bg-white';
         let textClass = 'text-slate-400';
@@ -754,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (c === '★') {
           if (val > 0) {
             bgClass = 'bg-amber-100 text-amber-900 font-bold';
-            textClass = 'text-amber-950';
+            textClass = 'text-amber-950 font-black';
           }
         } else {
           if (val >= 6) {
@@ -762,7 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
             textClass = 'text-white';
           } else if (val >= 3) {
             bgClass = 'bg-amber-300 text-amber-950 font-bold';
-            textClass = 'text-amber-950';
+            textClass = 'text-amber-950 font-bold';
           } else if (val >= 1) {
             bgClass = 'bg-yellow-100 text-yellow-900 font-semibold';
             textClass = 'text-yellow-900';

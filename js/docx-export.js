@@ -154,24 +154,25 @@ class DocxExport {
     }
 
     const periods = ['早自習', '第一節', '第二節', '第三節', '第四節', '中午', '第五節', '第六節', '第七節'];
-    const codes = [
-      { c: '○', n: '玩文具' },
-      { c: '+', n: '放空' },
-      { c: '↑', n: '找東西' },
+    const columns = [
+      { c: '○', n: '玩文具雜物' },
+      { c: '+', n: '放空發呆' },
+      { c: '↑', n: '尋找遺失物' },
       { c: '～', n: '身體扭動' },
       { c: '×', n: '干擾他人' },
-      { c: '！', n: '搶話發言' },
-      { c: '★', n: '正向好行為' }
+      { c: '！', n: '未舉手搶話' },
+      { c: '★', n: '★ 正向好行為' }
     ];
 
-    let headerCols = codes.map(c => `<th style="text-align:center;">${c.c}<br><small>${c.n}</small></th>`).join('');
+    let headerCols = columns.map(c => `<th style="text-align:center; padding: 6pt;">${c.n}</th>`).join('');
     let matrixRows = '';
 
     periods.forEach(p => {
-      let cols = codes.map(c => {
-        const val = (summary.heatmap && summary.heatmap[p] && summary.heatmap[p][c.c]) || 0;
+      let cols = columns.map(col => {
+        const c = col.c;
+        const val = (summary.heatmap && summary.heatmap[p] && summary.heatmap[p][c]) || 0;
         let bg = '#FFFFFF';
-        if (c.c === '★') {
+        if (c === '★') {
           bg = val > 0 ? '#DCFCE7' : '#FFFFFF';
         } else {
           bg = val > 5 ? '#FECACA' : val > 2 ? '#FED7AA' : val > 0 ? '#FEF08A' : '#FFFFFF';

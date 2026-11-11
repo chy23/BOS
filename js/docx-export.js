@@ -49,7 +49,7 @@ class DocxExport {
         : '';
       const posTag = (p.positiveCount > 0) ? `<br><b style="color:#D97706;">★ 正向良好行為：${p.positiveCount} 次</b>` : '';
       const intensityMap = { 1: '1-輕度(自我)', 2: '2-中度(鄰近)', 3: '3-重度(全班)' };
-      const intTag = (p.intensity && p.intensity > 1)
+      const intTag = p.intensity
         ? `<br><span style="font-size:9pt; color:#B45309; font-weight:bold;">⚡ 干擾強度：${intensityMap[p.intensity] || p.intensity}</span>`
         : '';
 

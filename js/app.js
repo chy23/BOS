@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         observer: '',
         subject: '',
         activityType: '',
-        intensity: 1,
+        intensity: '',
         outcome: '',
         isV: false,
         positiveCount: 0,
@@ -431,7 +431,9 @@ document.addEventListener('DOMContentLoaded', () => {
         : '';
 
       const observerLabel = (pData && pData.observer)
-        ? `<span class="text-[9px] opacity-75 truncate max-w-[80px]">(${pData.observer})</span>`
+        ? `<span class="text-[9px] opacity-75 truncate max-w-[80px]">(${pData.observer}${pData.subject ? '·' + pData.subject : ''})</span>`
+        : (pData && pData.subject)
+        ? `<span class="text-[9px] opacity-75 truncate max-w-[80px]">(${pData.subject})</span>`
         : '';
 
       btn.innerHTML = `
@@ -600,15 +602,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const period = dayRecord.periods[currentPeriodIndex];
     dom.contextNoteInput.value = period.contextNote || '';
 
-    // 同步基礎模式中引進之進階輕量欄位（科目、型態、強度、成效）
+    // 同步基礎模式當下快選（📚 課堂科目、🎯 活動型態）與課後選填欄位（⚡ 強度、🎯 成效）
     const basicSubj = document.getElementById('basicSubjectSelect');
     const basicAct = document.getElementById('basicActivitySelect');
     const basicInt = document.getElementById('basicIntensitySelect');
     const basicOut = document.getElementById('basicOutcomeSelect');
     if (basicSubj) basicSubj.value = period.subject || '';
     if (basicAct) basicAct.value = period.activityType || '';
-    if (basicInt) basicInt.value = String(period.intensity || 1);
+    if (basicInt) basicInt.value = period.intensity ? String(period.intensity) : '';
     if (basicOut) basicOut.value = period.outcome || '';
+
+    // 更新課後補充抽屜狀態徽章（沒紀錄也完全沒問題）
+    const postBadge = document.getElementById('basicPostClassStatusBadge');
+    if (postBadge) {
+      const hasPostData =
+        (period.antecedentTags && period.antecedentTags.length > 0) ||
+        (period.consequenceTags && period.consequenceTags.length > 0) ||
+        Boolean(period.intensity) ||
+        Boolean(period.outcome) ||
+        Boolean(period.contextNote && period.contextNote.trim());
+      if (hasPostData) {
+        postBadge.textContent = '✅ 已補充課後脈絡';
+        postBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+      } else {
+        postBadge.textContent = '選填 · 尚未補充';
+        postBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-slate-200/80 text-slate-600';
+      }
+    }
 
     // 更新 A 標籤選取外觀
     const aButtons = dom.antecedentTagsContainer.querySelectorAll('.a-tag-btn');
@@ -675,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const basicOut = document.getElementById('basicOutcomeSelect');
     if (basicSubj) period.subject = basicSubj.value;
     if (basicAct) period.activityType = basicAct.value;
-    if (basicInt) period.intensity = Number(basicInt.value || 1);
+    if (basicInt) period.intensity = basicInt.value ? Number(basicInt.value) : '';
     if (basicOut) period.outcome = basicOut.value;
     period.observer = getActiveObserver();
     dayRecord.medTime = dom.medTimeInput.value.trim();
@@ -2092,12 +2112,13 @@ document.addEventListener('DOMContentLoaded', () => {
         period.positiveCount = 0;
         period.subject = '';
         period.activityType = '';
-        period.intensity = 1;
+        period.intensity = '';
         period.outcome = '';
         period.behaviors.forEach(b => b.count = 0);
         period.antecedentTags = [];
         period.consequenceTags = [];
         period.contextNote = '';
+        renderPeriodTabs();
         refreshPeriodUI();
       }
     });
@@ -2108,9 +2129,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (el) {
         el.addEventListener('change', () => {
           saveCurrentPeriodInputs();
+          renderPeriodTabs();
+          refreshAbcUI();
         });
       }
     });
+
+    if (dom.contextNoteInput) {
+      dom.contextNoteInput.addEventListener('input', () => {
+        saveCurrentPeriodInputs();
+        refreshAbcUI();
+      });
+    }
 
     // 匯出當日 Word
     dom.btnExportDailyWord.addEventListener('click', () => {

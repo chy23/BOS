@@ -67,7 +67,8 @@ function handleUpsertRecord(payload) {
   const rawSheet = getOrCreateSheet(ss, SHEET_NAME_RAW, [
     "更新時間戳記", "個案代號", "日期", "用藥時間", "身體不適紀錄",
     "節次", "記錄老師/角色", "行為代號", "行為名稱", "次數",
-    "前事脈絡(A)", "後果反應(C)", "詳細情境備註", "正向行為次數"
+    "前事脈絡(A)", "後果反應(C)", "詳細情境備註", "正向行為次數",
+    "課堂科目", "教學活動型態", "干擾強度(選填)", "處遇成效(選填)"
   ]);
 
   const medTime = sanitizeCell(payload.medTime || "未記錄");
@@ -90,13 +91,18 @@ function handleUpsertRecord(payload) {
     const consequenceTags = sanitizeCell((period.consequenceTags || []).join(", "));
     const contextNote = sanitizeCell(period.contextNote || "");
     const positiveCount = Number(period.positiveCount || 0);
+    const subject = sanitizeCell(period.subject || "");
+    const activityType = sanitizeCell(period.activityType || "");
+    const intensity = period.intensity ? sanitizeCell(String(period.intensity)) : "";
+    const outcome = sanitizeCell(period.outcome || "");
     const behaviors = period.behaviors || [];
 
     if (behaviors.length === 0 || period.isV) {
       rowsToInsert.push([
         timestamp, caseId, date, medTime, discomfort,
         periodName, periodObserver, "V", "常態穩定/無干擾", 0,
-        antecedentTags, consequenceTags, contextNote, positiveCount
+        antecedentTags, consequenceTags, contextNote, positiveCount,
+        subject, activityType, intensity, outcome
       ]);
     } else {
       behaviors.forEach(function(b) {
@@ -104,7 +110,8 @@ function handleUpsertRecord(payload) {
           rowsToInsert.push([
             timestamp, caseId, date, medTime, discomfort,
             periodName, periodObserver, sanitizeCell(b.code), sanitizeCell(b.name), Number(b.count || 0),
-            antecedentTags, consequenceTags, contextNote, positiveCount
+            antecedentTags, consequenceTags, contextNote, positiveCount,
+            subject, activityType, intensity, outcome
           ]);
         }
       });
@@ -252,7 +259,11 @@ function handleGetRecord(caseId, date) {
           antecedentTags: row[10] ? String(row[10]).split(", ") : [],
           consequenceTags: row[11] ? String(row[11]).split(", ") : [],
           contextNote: String(row[12] || ""),
-          positiveCount: Number(row[13] || 0)
+          positiveCount: Number(row[13] || 0),
+          subject: String(row[14] || ""),
+          activityType: String(row[15] || ""),
+          intensity: row[16] ? Number(row[16]) : "",
+          outcome: String(row[17] || "")
         };
       }
 
@@ -275,6 +286,10 @@ function handleGetRecord(caseId, date) {
     return periodMap[pName] || {
       name: pName,
       observer: "",
+      subject: "",
+      activityType: "",
+      intensity: "",
+      outcome: "",
       isV: false,
       behaviors: [],
       antecedentTags: [],

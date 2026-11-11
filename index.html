@@ -232,63 +232,75 @@
         <!-- 由 app.js 動態渲染 -->
       </div>
 
-      <!-- A-B-C 行為脈絡注記 (整合進階模式之：干擾強度、介入成效、特殊臨床觀察快選) -->
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3.5">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+      <!-- 課後補充抽屜：A-B-C 行為脈絡、干擾強度與處遇成效 (預設收合，課堂當下免填，不填亦不影響儲存與統計) -->
+      <details id="basicPostClassDrawer" class="bg-white rounded-2xl border border-slate-200 shadow-xs group overflow-hidden">
+        <summary class="p-3.5 px-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-slate-50/70 hover:bg-slate-100/80 transition-colors list-none">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-            <h3 class="font-black text-slate-900 text-sm">A-B-C 行為脈絡與處遇成效注記</h3>
+            <h3 class="font-black text-slate-800 text-xs sm:text-sm">📝 課後補充：A-B-C 行為脈絡、干擾強度與處遇成效</h3>
+            <span class="text-[11px] font-bold text-slate-500 hidden md:inline">（課堂當下免填 · 課後有空再點開補充，不填亦完全正常）</span>
           </div>
+          <div class="flex items-center gap-2">
+            <span id="basicPostClassStatusBadge" class="text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-slate-200/80 text-slate-600">
+              選填 · 尚未補充
+            </span>
+            <span class="text-xs font-bold text-blue-600 group-open:rotate-180 transition-transform">▼ 展開課後紀錄</span>
+          </div>
+        </summary>
 
-          <!-- ★ 由進階模式導入基礎模式：本節干擾強度 (1~3) 與 介入成效 (Outcome) -->
-          <div class="flex flex-wrap items-center gap-2 text-xs">
-            <div class="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-              <span class="font-extrabold text-slate-700">⚡ 干擾強度:</span>
-              <select id="basicIntensitySelect" class="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800">
-                <option value="">未標記</option>
-                <option value="1">1 = 輕度 (自我干擾)</option>
-                <option value="2">2 = 中度 (干擾鄰近他人)</option>
-                <option value="3">3 = 重度 (中斷全班/具破壞性)</option>
-              </select>
+        <div class="p-4 border-t border-slate-100 space-y-3.5">
+          <!-- 課後選填：本節干擾強度 (1~3) 與 介入成效 (Outcome) -->
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 text-xs">
+            <span class="font-bold text-slate-600">💡 課後回顧評估（選填，沒紀錄也沒問題）：</span>
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                <span class="font-extrabold text-slate-700">⚡ 干擾強度:</span>
+                <select id="basicIntensitySelect" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none">
+                  <option value="">未標記 (選填)</option>
+                  <option value="1">1 = 輕度 (自我干擾)</option>
+                  <option value="2">2 = 中度 (干擾鄰近他人)</option>
+                  <option value="3">3 = 重度 (中斷全班/具破壞性)</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-1 bg-emerald-50/80 px-2.5 py-1 rounded-lg border border-emerald-200">
+                <span class="font-extrabold text-emerald-900">🎯 處遇成效:</span>
+                <select id="basicOutcomeSelect" class="bg-transparent text-xs font-bold text-emerald-900 focus:outline-none">
+                  <option value="">未標記 (選填)</option>
+                  <option value="立即改善（重回任務 >5分）">立即改善（重回任務 &gt;5分）</option>
+                  <option value="短暫改善（<1分後復發）">短暫改善（&lt;1分後復發）</option>
+                  <option value="毫無反應（維持原狀）">毫無反應（維持原狀）</option>
+                  <option value="抗拒加劇（情緒升級/頂撞）">抗拒加劇（情緒升級/頂撞）</option>
+                </select>
+              </div>
             </div>
-            <div class="flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
-              <span class="font-extrabold text-emerald-900">🎯 處遇成效:</span>
-              <select id="basicOutcomeSelect" class="bg-white border border-emerald-300 rounded-lg px-2 py-0.5 text-xs font-bold text-emerald-900">
-                <option value="">未標記</option>
-                <option value="立即改善（重回任務 >5分）">立即改善（重回任務 &gt;5分）</option>
-                <option value="短暫改善（<1分後復發）">短暫改善（&lt;1分後復發）</option>
-                <option value="毫無反應（維持原狀）">毫無反應（維持原狀）</option>
-                <option value="抗拒加劇（情緒升級/頂撞）">抗拒加劇（情緒升級/頂撞）</option>
-              </select>
+          </div>
+
+          <!-- 前置事件 (A: Antecedent) 快捷標籤群 -->
+          <div>
+            <label class="text-xs font-extrabold text-blue-800 block mb-1.5">
+              【A 前事觸發 (Antecedent)】行為發生前的情境與誘發因子（可課後點選）：
+            </label>
+            <div id="antecedentTagsContainer" class="flex flex-wrap gap-1.5">
+              <!-- 自動注入 A 標籤 -->
             </div>
           </div>
-        </div>
 
-        <!-- 前置事件 (A: Antecedent) 快捷標籤群 -->
-        <div>
-          <label class="text-xs font-extrabold text-blue-800 block mb-1.5">
-            【A 前事觸發 (Antecedent)】行為發生前的情境與誘發因子：
-          </label>
-          <div id="antecedentTagsContainer" class="flex flex-wrap gap-1.5">
-            <!-- 自動注入 A 標籤 -->
+          <!-- 後續反應 (C: Consequence) 快捷標籤群 -->
+          <div>
+            <label class="text-xs font-extrabold text-amber-800 block mb-1.5">
+              【C 介入處置 (Intervention)】行為發生後教師採取的處遇（可課後點選）：
+            </label>
+            <div id="consequenceTagsContainer" class="flex flex-wrap gap-1.5">
+              <!-- 自動注入 C 標籤 -->
+            </div>
+          </div>
+
+          <!-- 詳細情境備註框 -->
+          <div>
+            <textarea id="contextNoteInput" rows="2" placeholder="課後補充備忘（選填，不填亦可）：例如「數學多步驟解題卡關，協助拆成兩階段算式後能順利完成...」" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
         </div>
-
-        <!-- 後續反應 (C: Consequence) 快捷標籤群 -->
-        <div>
-          <label class="text-xs font-extrabold text-amber-800 block mb-1.5">
-            【C 介入處置 (Intervention)】行為發生後教師採取的立即處遇：
-          </label>
-          <div id="consequenceTagsContainer" class="flex flex-wrap gap-1.5">
-            <!-- 自動注入 C 標籤 -->
-          </div>
-        </div>
-
-        <!-- 詳細情境備註框 -->
-        <div>
-          <textarea id="contextNoteInput" rows="2" placeholder="詳細情境脈絡或對話備忘：例如「數學多步驟解題卡關，協助拆成兩階段算式後能順利完成...」" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500"></textarea>
-        </div>
-      </div>
+      </details>
 
       <!-- 底部浮動操作列 (支援科任單節送出與全日儲存) -->
       <div class="bg-white p-3.5 px-4 rounded-2xl border border-slate-200 shadow-md flex flex-wrap items-center justify-between gap-3 sticky bottom-4 z-20">

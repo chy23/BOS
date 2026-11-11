@@ -2,14 +2,14 @@
  * App: 主應用程式邏輯控制器 (升級：多師協同、個案管理刪除、A-B-C脈絡、正向行為、雲端程式碼)
  */
 document.addEventListener('DOMContentLoaded', () => {
-  // 核心行為代號 (還原附檔紙本，並配置直覺圖示)
+  // 核心行為代號 (還原附檔紙本，並配置專屬 GIF 微動畫圖示)
   const BEHAVIORS = [
-    { code: '○', name: '玩文具、雜物、桌椅', icon: '✏️', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅', badgeColor: 'bg-blue-600', lightColor: 'text-blue-600' },
-    { code: '+', name: '放空、發呆', icon: '💭', desc: '眼神渙散、無視線接觸課堂重點、未跟隨教學', badgeColor: 'bg-emerald-600', lightColor: 'text-emerald-600' },
-    { code: '↑', name: '尋找東西、遺失物', icon: '🔍', desc: '低頭翻書包、找筆、掉文具、離開座位搜尋', badgeColor: 'bg-amber-600', lightColor: 'text-amber-600' },
-    { code: '～', name: '扭、抖動身體', icon: '🦵', desc: '頻繁抖腳、扭動扭曲身軀、坐立難安', badgeColor: 'bg-purple-600', lightColor: 'text-purple-600' },
-    { code: '×', name: '以動作、講話干擾附近人', icon: '🗣️', desc: '拍打同學、故意推擠、交談、發出聲響', badgeColor: 'bg-rose-600', lightColor: 'text-rose-600' },
-    { code: '！', name: '未舉手發言、搶話', icon: '📢', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600', lightColor: 'text-pink-600' }
+    { code: '○', name: '玩文具、雜物、桌椅', icon: '✏️', animClass: 'gif-anim-pencil', desc: '玩筆、尺、橡皮擦屑、桌面雜物、搖晃桌椅', badgeColor: 'bg-blue-600', lightColor: 'text-blue-600' },
+    { code: '+', name: '放空、發呆', icon: '💭', animClass: 'gif-anim-cloud', desc: '眼神渙散、無視線接觸課堂重點、未跟隨教學', badgeColor: 'bg-emerald-600', lightColor: 'text-emerald-600' },
+    { code: '↑', name: '尋找東西、遺失物', icon: '🔍', animClass: 'gif-anim-search', desc: '低頭翻書包、找筆、掉文具、離開座位搜尋', badgeColor: 'bg-amber-600', lightColor: 'text-amber-600' },
+    { code: '～', name: '扭、抖動身體', icon: '🦵', animClass: 'gif-anim-leg', desc: '頻繁抖腳、扭動扭曲身軀、坐立難安', badgeColor: 'bg-purple-600', lightColor: 'text-purple-600' },
+    { code: '×', name: '以動作、講話干擾附近人', icon: '🗣️', animClass: 'gif-anim-talk', desc: '拍打同學、故意推擠、交談、發出聲響', badgeColor: 'bg-rose-600', lightColor: 'text-rose-600' },
+    { code: '！', name: '未舉手發言、搶話', icon: '📢', animClass: 'gif-anim-speaker', desc: '老師或他人講話時插話、大聲自語、搶答', badgeColor: 'bg-pink-600', lightColor: 'text-pink-600' }
   ];
 
   // 學校作息課表排程
@@ -422,19 +422,19 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'behavior-card relative bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl p-4 shadow-xs transition-all select-none cursor-pointer flex flex-col justify-between overflow-hidden group';
       
       card.innerHTML = `
-        <!-- 右側空白處大圖示浮水印 (眼角餘光瞬間辨識) -->
-        <div class="absolute right-3.5 bottom-12 text-6xl opacity-15 pointer-events-none select-none transition-transform group-hover:scale-110">
+        <!-- 右側空白處大圖示浮水印 (GIF微動畫：眼角餘光瞬間辨識) -->
+        <div class="absolute right-3.5 bottom-12 text-6xl opacity-15 pointer-events-none select-none transition-transform group-hover:scale-110 watermark-anim ${b.animClass}">
           ${b.icon}
         </div>
 
         <div>
-          <!-- 上方：代號 + 醒目生活化圖示 + 次數 -->
+          <!-- 上方：代號 + 動態 GIF 徽章 + 次數 -->
           <div class="flex items-center justify-between mb-2.5 relative z-10">
             <div class="flex items-center gap-2">
               <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
                 ${b.code}
               </span>
-              <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl bg-slate-100 border border-slate-200 shadow-2xs" title="${b.name}">
+              <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl text-2xl bg-slate-100 border border-slate-200 shadow-2xs ${b.animClass}" title="${b.name}">
                 ${b.icon}
               </span>
             </div>

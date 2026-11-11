@@ -59,3 +59,85 @@ input, textarea, select {
 .dot-pulse {
   animation: pulse-dot 2s infinite ease-in-out;
 }
+
+/* =================================================== */
+/* 專屬行為 GIF 微動畫 (零耗電、100% 離線高清動態) */
+/* =================================================== */
+
+/* 1. 玩文具 (鉛筆轉筆擺動) */
+@keyframes anim-pencil {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  50% { transform: rotate(22deg) translateY(-3px); }
+}
+.gif-anim-pencil {
+  display: inline-block;
+  animation: anim-pencil 1.2s infinite ease-in-out;
+  transform-origin: bottom center;
+}
+
+/* 2. 放空發呆 (雲朵悠閒浮動呼吸) */
+@keyframes anim-cloud {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; }
+  50% { transform: translateY(-4px) scale(1.1); opacity: 1; }
+}
+.gif-anim-cloud {
+  display: inline-block;
+  animation: anim-cloud 2s infinite ease-in-out;
+}
+
+/* 3. 找東西 (放大鏡左右掃描搜尋) */
+@keyframes anim-search {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-3px, -2px) rotate(-14deg); }
+  50% { transform: translate(3px, 1px) rotate(12deg); }
+  75% { transform: translate(-2px, 2px) rotate(-6deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.gif-anim-search {
+  display: inline-block;
+  animation: anim-search 1.8s infinite ease-in-out;
+}
+
+/* 4. 扭動身體 (抖腳/扭軀高頻震動) */
+@keyframes anim-leg {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateY(-2.5px) rotate(-7deg); }
+  40% { transform: translateY(1.5px) rotate(7deg); }
+  60% { transform: translateY(-2px) rotate(-5deg); }
+  80% { transform: translateY(1px) rotate(5deg); }
+}
+.gif-anim-leg {
+  display: inline-block;
+  animation: anim-leg 0.65s infinite ease-in-out;
+}
+
+/* 5. 干擾同儕 (拍打講話震盪跳動) */
+@keyframes anim-talk {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.18) rotate(-12deg); }
+  50% { transform: scale(1.05) rotate(4deg); }
+  75% { transform: scale(1.14) rotate(-6deg); }
+}
+.gif-anim-talk {
+  display: inline-block;
+  animation: anim-talk 1.1s infinite ease-in-out;
+}
+
+/* 6. 未舉手搶話 (大聲公擴音振動發話) */
+@keyframes anim-speaker {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(-14deg) scale(1.22); }
+  40% { transform: rotate(4deg) scale(1.05); }
+  60% { transform: rotate(-8deg) scale(1.14); }
+  80% { transform: rotate(2deg) scale(1.02); }
+}
+.gif-anim-speaker {
+  display: inline-block;
+  animation: anim-speaker 1.2s infinite cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* 浮水印柔和慢速動畫 */
+.watermark-anim {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+  animation-duration: 2.5s !important;
+}

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    ==========================================================================
+    🌟 BOS 課堂行為觀察速記與臨床鑑別評估系統 — 專屬品牌圖示 (App Icon)
+    🎯 系統架構與領域設計 (System Architect & Designer): Chiahua (chy23)
+    ==========================================================================
+  -->
+  <defs>
+    <linearGradient id="bosBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a84ff" />
+      <stop offset="55%" stop-color="#0071e3" />
+      <stop offset="100%" stop-color="#0040dd" />
+    </linearGradient>
+    <linearGradient id="bosGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.24" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#001446" flood-opacity="0.32" />
+    </filter>
+  </defs>
+
+  <!-- Apple iOS Squircle Background -->
+  <rect x="16" y="16" width="480" height="480" rx="112" ry="112" fill="url(#bosBg)" />
+  <!-- Top Glossy Highlight -->
+  <path d="M 128 16 L 384 16 C 446 16 496 66 496 128 L 496 220 C 370 255 142 255 16 220 L 16 128 C 16 66 66 16 128 16 Z" fill="url(#bosGlow)" />
+
+  <!-- Subtle Observation Grid Ring -->
+  <circle cx="256" cy="256" r="182" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-width="6" stroke-dasharray="16 14" />
+
+  <!-- Core Icon Group -->
+  <g filter="url(#softShadow)">
+    <!-- Bold Modern "B" Monogram -->
+    <path d="M 136 124
+             L 254 124
+             C 304 124 338 150 338 192
+             C 338 221 320 242 292 250
+             C 328 258 350 283 350 318
+             C 350 364 312 392 256 392
+             L 136 392
+             Z
+             M 196 172
+             L 196 230
+             L 244 230
+             C 267 230 280 219 280 201
+             C 280 183 267 172 244 172
+             Z
+             M 196 278
+             L 196 342
+             L 250 342
+             C 276 342 292 329 292 310
+             C 292 291 276 278 250 278
+             Z"
+          fill="#ffffff" />
+
+    <!-- Clinical Observation Pulse & Insight Badge (Top-Right Accent) -->
+    <circle cx="368" cy="146" r="57" fill="#ffffff" />
+    <circle cx="368" cy="146" r="52" fill="#062870" />
+    <path d="M 333 146 L 349 146 L 359 119 L 373 173 L 384 136 L 393 146 L 404 146"
+          fill="none" stroke="#30d158" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

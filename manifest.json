@@ -1,0 +1,30 @@
+{
+  "name": "BOS 課堂行為觀察速記與臨床鑑別評估系統",
+  "short_name": "BOS 行為觀察",
+  "description": "課堂一指極速紀錄、全程個資去識別化、跨科任多師協同與兒童心智科臨床語言對接系統 (Designed by Chiahua / chy23)",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#0071e3",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

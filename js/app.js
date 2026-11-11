@@ -194,6 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化進階臨床量化模式 (ClassroomBehaviorRecord Schema & 疾病鑑別映射)
     initAdvancedMode();
 
+    // 初始化設計者隱藏彩蛋 (Console 簽名 + 左上角 B 連點 5 下 + Konami Code)
+    initCreatorEasterEgg();
+
     // 更新紀錄小紅點提示
     if (localStorage.getItem('bos_viewed_v3_0') && dom.changelogNewDot) {
       dom.changelogNewDot.classList.add('hidden');
@@ -2267,6 +2270,133 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('📋 已複製後端 Code.gs 完整程式碼！可直接到 Google Apps Script 貼上', 'success');
       });
     }
+  }
+
+  // ===================== 🥚 設計者隱藏彩蛋 (Creator Easter Egg) =====================
+  function initCreatorEasterEgg() {
+    const creatorMeta = {
+      system: 'BOS 課堂行為觀察速記與臨床鑑別評估系統',
+      version: 'v3.1.0 PRO',
+      architect: 'Chiahua (chy23)',
+      mission: '讓特教與普教老師在忙碌課堂中一指完成專業行為量化觀察，守護每位孩子的成長與隱私。',
+      triggers: [
+        '1. 連續點擊左上角藍色「B」圖示 5 下',
+        '2. 鍵盤輸入經典指令：↑ ↑ ↓ ↓ ← → ← → B A',
+        '3. 開發者工具 Console 呼叫：BOS_CREATOR()'
+      ]
+    };
+
+    // 1. 開發者控制台 (DevTools Console) 專屬彩蛋簽名
+    console.log(
+      '%c BOS %c 課堂行為觀察與臨床鑑別系統 v3.1.0 ',
+      'background:#0071e3; color:#ffffff; font-weight:900; padding:4px 8px; border-radius:6px 0 0 6px; font-size:12px;',
+      'background:#1e293b; color:#38bdf8; font-weight:700; padding:4px 10px; border-radius:0 6px 6px 0; font-size:12px;'
+    );
+    console.log(
+      `%c🌟 Designed & Architected by ${creatorMeta.architect}\n💡 "${creatorMeta.mission}"\n🥚 隱藏彩蛋提示：連點左上角「B」圖示 5 下，或在 Console 輸入 BOS_CREATOR()`,
+      'color:#64748b; font-size:11px; line-height:1.6;'
+    );
+
+    function showEasterEggModal() {
+      let existing = document.getElementById('bosCreatorEasterEggModal');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'bosCreatorEasterEggModal';
+      modal.className = 'fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in';
+      modal.innerHTML = `
+        <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-indigo-400/30 space-y-4 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40">
+              🥚 HIDDEN EASTER EGG UNLOCKED
+            </span>
+            <button type="button" id="btnCloseEasterEgg" class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-bold flex items-center justify-center cursor-pointer">
+              ✕
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3.5">
+            <div class="w-14 h-14 rounded-2xl bg-[#0071e3] text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-blue-500/30 border border-blue-400/40">
+              B
+            </div>
+            <div>
+              <h3 class="text-base font-black tracking-tight text-white">BOS 課堂行為觀察系統</h3>
+              <p class="text-xs text-indigo-300 font-semibold mt-0.5">System Architect &amp; Domain Designer</p>
+            </div>
+          </div>
+
+          <div class="bg-white/10 rounded-2xl p-4 border border-white/10 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300 font-bold">✨ 系統原創設計者</span>
+              <span class="font-mono font-black text-amber-300 text-sm">${creatorMeta.architect}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300 font-bold">🔬 核心架構版本</span>
+              <span class="font-mono font-bold text-emerald-300">${creatorMeta.version} (Dual-Engine)</span>
+            </div>
+            <p class="text-slate-200 leading-relaxed pt-2 border-t border-white/10 italic">
+              「${creatorMeta.mission}」
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-slate-400 font-mono">Crafted with care for Educators &amp; Kids ❤️</span>
+            <button type="button" id="btnConfirmEasterEgg" class="px-4 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl text-xs font-black shadow-sm cursor-pointer active:scale-95 transition-all">
+              致敬收下 ✨
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      modal.querySelector('#btnCloseEasterEgg').addEventListener('click', () => modal.remove());
+      modal.querySelector('#btnConfirmEasterEgg').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    }
+
+    // 暴露全域 Console 函數
+    window.BOS_CREATOR = () => {
+      showEasterEggModal();
+      return creatorMeta;
+    };
+
+    // 2. 左上角藍色「B」Logo 連續點擊 5 下觸發
+    const logo = document.getElementById('bosBrandLogo');
+    let clickCount = 0;
+    let clickTimer = null;
+    if (logo) {
+      logo.addEventListener('click', () => {
+        clickCount += 1;
+        clearTimeout(clickTimer);
+        if (clickCount >= 5) {
+          clickCount = 0;
+          showEasterEggModal();
+        } else {
+          clickTimer = setTimeout(() => {
+            clickCount = 0;
+          }, 1200);
+        }
+      });
+    }
+
+    // 3. 鍵盤 Konami Code (↑ ↑ ↓ ↓ ← → ← → B A) 觸發
+    const konamiSeq = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    let konamiIdx = 0;
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (key === konamiSeq[konamiIdx]) {
+        konamiIdx += 1;
+        if (konamiIdx === konamiSeq.length) {
+          konamiIdx = 0;
+          showEasterEggModal();
+        }
+      } else {
+        konamiIdx = (key === konamiSeq[0]) ? 1 : 0;
+      }
+    });
   }
 
   init();

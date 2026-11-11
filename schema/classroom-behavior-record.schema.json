@@ -39,6 +39,10 @@
           "maximum": 8,
           "description": "當日課堂節次（1-8 節）"
         },
+        "period_label": {
+          "type": "string",
+          "description": "學校實體課表時段名稱與時間（早自習、第一節~第七節、中午）"
+        },
         "subject": {
           "type": "string",
           "description": "課堂科目",

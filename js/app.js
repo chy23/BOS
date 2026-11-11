@@ -1088,27 +1088,29 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (targetId === 'view-advanced') refreshAdvancedModeUI();
   }
 
-  // ===================== 🔬 進階臨床量化模式 (ClassroomBehaviorRecord) =====================
+  // ===================== 🔬 進階模式 (ClassroomBehaviorRecord) =====================
   const advState = {
     record_id: '',
     student_id: '',
     timestamp: '',
-    period: 2,
-    subject: '數學',
-    activity_type: '個別書寫作答',
+    schedule_index: 0,
+    period: 1,
+    period_label: '早自習 (08:00~08:35)',
+    subject: '國語',
+    activity_type: '全班聽講',
     environment_notes: '',
-    antecedent_category: 'TASK_DIFFICULTY',
-    antecedent_details: '數學難題/多步驟解題卡關',
+    antecedent_category: 'NONE_OBSERVED',
+    antecedent_details: '無明顯外部前因',
     behavior_cat_filter: 'ALL',
     behavior_category: 'INATTENTION',
     behavior_target_code: 'OFF',
     behavior_target_label: '脫離任務/發呆 (OFF)',
-    related_conditions: ['ADHD_INATTENTION', 'ANXIETY_RSD', 'SLD_READING_WRITING', 'SLD_MATH'],
+    related_conditions: ['ADHD_INATTENTION', 'ANXIETY_RSD', 'SLD_READING_WRITING'],
     frequency: 1,
-    duration_minutes: 5,
-    intensity: 2,
-    strategy: 'TASK_ADAPTATION',
-    strategy_label: '調整難度/切分任務步驟',
+    duration_minutes: 0,
+    intensity: 1,
+    strategy: 'NONE_IGNORE',
+    strategy_label: '暫時忽視/未介入',
     outcome: 'IMMEDIATE_IMPROVEMENT',
     outcome_label: '立即改善（重回任務並持續 > 5分鐘）',
     qualitative_notes: '',
@@ -1133,7 +1135,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     advState.student_id = currentCaseId || 'S105';
     advState.record_id = window.ClinicalAdvanced.generateRecordId(currentDate);
+    advState.schedule_index = currentPeriodIndex;
     advState.period = mapScheduleIndexToPeriodInt(currentPeriodIndex);
+    const curSched = SCHEDULE[currentPeriodIndex] || SCHEDULE[2];
+    advState.period_label = `${curSched.name} (${curSched.timeStr})`;
 
     const now = new Date();
     const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -1179,18 +1184,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderAdvContextPills() {
     const CA = window.ClinicalAdvanced;
-    // 1~8 節次
+    // 比照基礎模式課堂排程：早自習、第一節～第七節、中午（含時間與即時「現在」指示燈）
     const periodContainer = document.getElementById('advPeriodPills');
     if (periodContainer) {
-      periodContainer.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(p => {
-        const active = advState.period === p;
-        return `<button type="button" data-period="${p}" class="adv-period-btn px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border cursor-pointer ${
-          active ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
-        }">第 ${p} 節</button>`;
+      const currentSched = getCurrentScheduleInfo();
+      const isToday = (dom.dateInput.value === new Date().toISOString().split('T')[0]);
+
+      periodContainer.innerHTML = SCHEDULE.map((schedItem, idx) => {
+        const isSelected = advState.schedule_index === idx;
+        const isNowLive = (idx === currentSched.index && isToday);
+
+        const btnClass = isSelected
+          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 scale-[1.02]'
+          : isNowLive
+          ? 'bg-emerald-50 text-emerald-950 border-emerald-400 hover:bg-emerald-100 ring-2 ring-emerald-300'
+          : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
+
+        const liveIndicator = isNowLive
+          ? `<span class="inline-flex items-center gap-1 text-[10px] font-black ${isSelected ? 'text-emerald-200' : 'text-emerald-700'}">
+               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>現在
+             </span>`
+          : '';
+
+        return `
+          <button type="button" data-sched-idx="${idx}" class="adv-period-btn px-3 py-1.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap flex flex-col items-start gap-0.5 border select-none cursor-pointer ${btnClass}">
+            <div class="flex items-center justify-between w-full gap-2">
+              <span class="text-xs font-black tracking-tight">${schedItem.name}</span>
+              ${liveIndicator}
+            </div>
+            <span class="text-[10px] font-medium opacity-80">${schedItem.timeStr}</span>
+          </button>
+        `;
       }).join('');
+
       periodContainer.querySelectorAll('.adv-period-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          advState.period = Number(btn.dataset.period);
+          const idx = Number(btn.dataset.schedIdx);
+          const schedItem = SCHEDULE[idx] || SCHEDULE[0];
+          advState.schedule_index = idx;
+          advState.period = mapScheduleIndexToPeriodInt(idx);
+          advState.period_label = `${schedItem.name} (${schedItem.timeStr})`;
+
+          // 若基礎模式該節已選科目或活動型態，自動同步帶入
+          const basicP = dayRecord && dayRecord.periods ? dayRecord.periods[idx] : null;
+          if (basicP && basicP.subject) advState.subject = basicP.subject;
+          if (basicP && basicP.activityType) advState.activity_type = basicP.activityType;
+
           renderAdvContextPills();
           updateAdvJsonPreview();
         });
@@ -1533,6 +1572,7 @@ document.addEventListener('DOMContentLoaded', () => {
       timestamp: isoTs,
       context: {
         period: Number(advState.period || 1),
+        period_label: advState.period_label || (SCHEDULE[advState.schedule_index || 0] ? `${SCHEDULE[advState.schedule_index || 0].name} (${SCHEDULE[advState.schedule_index || 0].timeStr})` : `第 ${advState.period || 1} 節`),
         subject: advState.subject,
         activity_type: advState.activity_type,
         environment_notes: envInput ? envInput.value.trim() : advState.environment_notes
@@ -1638,7 +1678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const condList = document.getElementById('advConditionsSummaryList');
     if (condList) {
       if (analysis.rankedConditions.length === 0) {
-        condList.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">尚無進階紀錄，請點擊上方「🧪 載入範例」或「💾 儲存進階臨床紀錄」</p>';
+        condList.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">尚無進階紀錄，請於上方選擇課堂行為並點擊「💾 儲存進階臨床紀錄」</p>';
       } else {
         const maxScore = Math.max(...analysis.rankedConditions.map(c => c.weightedScore), 1);
         condList.innerHTML = analysis.rankedConditions.map(c => {
@@ -1687,10 +1727,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableContainer = document.getElementById('advRecordsTableContainer');
     if (tableContainer) {
       if (records.length === 0) {
-        tableContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">目前尚無進階臨床事件紀錄。可點擊右上角「🧪 載入範例 (rec_20261111_001)」並儲存體驗！</div>';
+        tableContainer.innerHTML = '<div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">目前尚無進階模式事件紀錄。</div>';
       } else {
         const rows = records.map(r => {
           const behMeta = CA.getBehaviorByCode(r.behavior?.target_code);
+          const periodDisplay = r.context?.period_label || `第 ${r.context?.period} 節`;
           return `
             <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
               <td class="p-2.5 font-mono font-bold text-slate-800">
@@ -1698,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="text-[11px] text-blue-600 font-black">學生：${r.student_id}</span>
               </td>
               <td class="p-2.5">
-                <b>第 ${r.context?.period} 節 · ${r.context?.subject}</b><br>
+                <b>${periodDisplay} · ${r.context?.subject}</b><br>
                 <span class="text-[11px] text-slate-500">${r.context?.activity_type}</span>
               </td>
               <td class="p-2.5">
@@ -1768,12 +1809,16 @@ document.addEventListener('DOMContentLoaded', () => {
     advState.record_id = rec.record_id;
     advState.student_id = rec.student_id;
     advState.timestamp = rec.timestamp;
-    advState.period = rec.context?.period || 2;
-    advState.subject = rec.context?.subject || '數學';
-    advState.activity_type = rec.context?.activity_type || '個別書寫作答';
+    advState.period = rec.context?.period || 1;
+    const matchedSchedIdx = SCHEDULE.findIndex(s => rec.context?.period_label && rec.context.period_label.startsWith(s.name));
+    advState.schedule_index = matchedSchedIdx >= 0 ? matchedSchedIdx : mapPeriodIntToScheduleIndex(advState.period);
+    const schedObj = SCHEDULE[advState.schedule_index] || SCHEDULE[0];
+    advState.period_label = rec.context?.period_label || `${schedObj.name} (${schedObj.timeStr})`;
+    advState.subject = rec.context?.subject || '國語';
+    advState.activity_type = rec.context?.activity_type || '全班聽講';
     advState.environment_notes = rec.context?.environment_notes || '';
-    advState.antecedent_category = rec.antecedent?.category || 'TASK_DIFFICULTY';
-    advState.antecedent_details = rec.antecedent?.details || '數學難題/多步驟解題卡關';
+    advState.antecedent_category = rec.antecedent?.category || 'NONE_OBSERVED';
+    advState.antecedent_details = rec.antecedent?.details || '無明顯外部前因';
     advState.behavior_category = rec.behavior?.category || 'INATTENTION';
     advState.behavior_target_code = rec.behavior?.target_code || 'OFF';
     advState.behavior_target_label = rec.behavior?.target_label || '脫離任務/發呆 (OFF)';
@@ -1781,10 +1826,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ? [...rec.behavior.related_conditions]
       : [...(window.ClinicalAdvanced.getBehaviorByCode(advState.behavior_target_code)?.relatedConditions || [])];
     advState.frequency = rec.metrics?.frequency ?? 1;
-    advState.duration_minutes = rec.metrics?.duration_minutes ?? 8;
-    advState.intensity = rec.metrics?.intensity ?? 2;
-    advState.strategy = rec.intervention?.strategy || 'TASK_ADAPTATION';
-    advState.strategy_label = rec.intervention?.strategy_label || '調整難度/切分任務步驟';
+    advState.duration_minutes = rec.metrics?.duration_minutes ?? 0;
+    advState.intensity = rec.metrics?.intensity ?? 1;
+    advState.strategy = rec.intervention?.strategy || 'NONE_IGNORE';
+    advState.strategy_label = rec.intervention?.strategy_label || '暫時忽視/未介入';
     advState.outcome = rec.intervention?.outcome || 'IMMEDIATE_IMPROVEMENT';
     advState.outcome_label = rec.intervention?.outcome_label || '立即改善（重回任務並持續 > 5分鐘）';
     advState.qualitative_notes = rec.qualitative_notes || '';
@@ -1806,7 +1851,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnToAdv) {
       btnToAdv.addEventListener('click', () => {
         advState.student_id = currentCaseId;
+        advState.schedule_index = currentPeriodIndex;
         advState.period = mapScheduleIndexToPeriodInt(currentPeriodIndex);
+        const curSched = SCHEDULE[currentPeriodIndex] || SCHEDULE[0];
+        advState.period_label = `${curSched.name} (${curSched.timeStr})`;
+        const basicP = dayRecord && dayRecord.periods ? dayRecord.periods[currentPeriodIndex] : null;
+        if (basicP && basicP.subject) advState.subject = basicP.subject;
+        if (basicP && basicP.activityType) advState.activity_type = basicP.activityType;
         switchTab('view-advanced');
       });
     }
@@ -1814,16 +1865,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnToBasic = document.getElementById('btnSwitchToBasicMode');
     if (btnToBasic) {
       btnToBasic.addEventListener('click', () => switchTab('view-record'));
-    }
-
-    // 載入標準範例 (rec_20261111_001)
-    const btnSample = document.getElementById('btnLoadSampleAdvRecord');
-    if (btnSample) {
-      btnSample.addEventListener('click', () => {
-        const sample = CA.getSampleRecord('S105');
-        populateAdvFormFromRecord(sample);
-        showToast('🧪 已載入標準範例紀錄 rec_20261111_001 (S105 數學課多步驟應用題卡關)', 'success');
-      });
     }
 
     // 捲動至臨床映射表
@@ -1935,7 +1976,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 若勾選同步累加至基礎速記表
         const syncToBasic = document.getElementById('advSyncToBasicCheckbox');
         if (syncToBasic && syncToBasic.checked) {
-          const schedIdx = mapPeriodIntToScheduleIndex(rec.context.period);
+          const schedIdx = (advState.schedule_index !== undefined) ? advState.schedule_index : mapPeriodIntToScheduleIndex(rec.context.period);
           const targetPeriod = dayRecord.periods[schedIdx];
           if (targetPeriod) {
             const behMeta = CA.getBehaviorByCode(rec.behavior.target_code);

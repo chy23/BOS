@@ -205,12 +205,14 @@ class DocxExport {
       const intensityMap = { 1: '1-輕度(自我)', 2: '2-中度(鄰近)', 3: '3-重度(全班)' };
       const intStr = intensityMap[r.metrics?.intensity] || r.metrics?.intensity;
 
+      const periodDisplay = r.context?.period_label || `第 ${Number(r.context?.period || 1)} 節`;
+
       return `
         <tr>
           <td style="font-size:9pt;">
             <b>${this.escapeHtml(r.record_id)}</b><br>
             ${this.escapeHtml(datePart)} ${this.escapeHtml(timePart)}<br>
-            第 ${Number(r.context?.period || 1)} 節 · <b>${this.escapeHtml(r.context?.subject)}</b><br>
+            ${this.escapeHtml(periodDisplay)} · <b>${this.escapeHtml(r.context?.subject)}</b><br>
             <span style="color:#475569;">${this.escapeHtml(r.context?.activity_type)}</span>
             ${r.context?.environment_notes ? `<br><small style="color:#64748B;">環境：${this.escapeHtml(r.context.environment_notes)}</small>` : ''}
           </td>

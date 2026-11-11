@@ -1,5 +1,14 @@
 /**
- * App: 主應用程式邏輯控制器 (升級：多師協同、個案管理刪除、A-B-C脈絡、正向行為、雲端程式碼)
+ * ============================================================================
+ * 檔案名稱：js/app.js
+ * 模組職責：BOS 行為觀察速記與臨床鑑別評估系統 — 主應用程式邏輯控制器
+ * 系統設計者 (System Architect & Designer)：Chiahua (chy23)
+ * 版本資訊：v3.1.0 PRO (Dual-Engine: 基礎 3×3 九宮格速記 + 進階臨床量化模式)
+ * 設計說明：
+ *   1. 針對手機 (Mobile 2欄拇指網格)、平板 (iPad 3×3 九宮格)、電腦螢幕全自適應設計。
+ *   2. 支援多位科任老師與導師跨載具協同記錄、3 碼去識別化個案管理、課表即時連動。
+ *   3. 實作 ClassroomBehaviorRecord (JSON Schema Draft 2020-12) 與臨床鑑別映射。
+ * ============================================================================
  */
 document.addEventListener('DOMContentLoaded', () => {
   // 核心行為代號 (3×3 九宮格：原 6 大代號 + 進階模式導入之 3 項高頻臨床行為，並配置專屬 GIF 微動畫圖示)
@@ -466,44 +475,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderBehaviorCards() {
     dom.behaviorCardsContainer.innerHTML = '';
-    BEHAVIORS.forEach(b => {
+    BEHAVIORS.forEach((b, idx) => {
       const card = document.createElement('div');
-      card.className = 'behavior-card relative bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl p-4 shadow-xs transition-all select-none cursor-pointer flex flex-col justify-between overflow-hidden group';
+      // 手機版 (2欄) 第 9 張卡自動橫跨雙欄避免缺角，平板/電腦版 (md:grid-cols-3) 維持標準 3×3 九宮格
+      const spanClass = (idx === BEHAVIORS.length - 1) ? 'col-span-2 md:col-span-1' : '';
+      card.className = `behavior-card ${spanClass} relative bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl p-3 sm:p-4 shadow-xs transition-all select-none cursor-pointer flex flex-col justify-between overflow-hidden group`;
       
       card.innerHTML = `
-        <!-- 右側空白處大圖示 (GIF微動畫：生動輔助快速辨識) -->
-        <div class="absolute right-4 bottom-11 text-6xl opacity-25 pointer-events-none select-none transition-transform group-hover:scale-105 watermark-anim ${b.animClass}">
+        <!-- 右側空白處大圖示 (GIF微動畫：手機適度縮小避免遮擋文字，平板/電腦放大呈現) -->
+        <div class="absolute right-2 sm:right-4 bottom-10 sm:bottom-11 text-4xl sm:text-6xl opacity-20 sm:opacity-25 pointer-events-none select-none transition-transform group-hover:scale-105 watermark-anim ${b.animClass}">
           ${b.icon}
         </div>
 
         <div>
-          <!-- 上方：代號 + 次數 (依使用者需求已移除重複的小圖示，保留右側空白處動態圖示) -->
-          <div class="flex items-center justify-between mb-2.5 relative z-10">
-            <span class="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-2xl font-black ${b.badgeColor} text-white shadow-xs">
+          <!-- 上方：代號 + 次數 -->
+          <div class="flex items-center justify-between mb-1.5 sm:mb-2.5 relative z-10">
+            <span class="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-black ${b.badgeColor} text-white shadow-xs">
               ${b.code}
             </span>
-            <div class="flex items-center gap-1.5 bg-slate-50/80 px-3 py-1.5 rounded-xl border border-slate-200/80">
-              <span id="countDisplay_${b.code}" class="text-3xl font-black text-slate-900 tracking-tight transition-transform tabular-numbers">0</span>
-              <span class="text-xs text-slate-500 font-bold">次</span>
+            <div class="flex items-center gap-1 sm:gap-1.5 bg-slate-50/90 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200/80">
+              <span id="countDisplay_${b.code}" class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight transition-transform tabular-numbers">0</span>
+              <span class="text-[11px] sm:text-xs text-slate-500 font-bold">次</span>
             </div>
           </div>
 
           <!-- 中間文字區域 (點擊此處任何空白均立即 +1) -->
-          <div class="relative z-10 pr-10">
-            <h3 class="font-black text-slate-900 text-sm leading-snug mb-1 flex items-center gap-1.5">
+          <div class="relative z-10 pr-6 sm:pr-10">
+            <h3 class="font-black text-slate-900 text-xs sm:text-sm leading-snug mb-0.5 sm:mb-1 flex items-center gap-1">
               <span>${b.name}</span>
             </h3>
-            <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">${b.desc}</p>
+            <p class="text-[11px] sm:text-xs text-slate-500 line-clamp-1 sm:line-clamp-2 leading-relaxed mb-2 sm:mb-3">${b.desc}</p>
           </div>
         </div>
 
-        <!-- 下方操作區：-1 按鈕 與 快速點擊提示條 (符合 Apple HIG 觸控目標) -->
-        <div class="flex items-center gap-2 pt-2.5 border-t border-slate-100 relative z-10">
-          <button type="button" class="btn-minus px-3.5 py-2.5 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-black rounded-xl text-xs transition-all flex items-center justify-center gap-1 active:scale-90 touch-target-44" data-code="${b.code}" title="扣除 1 次">
+        <!-- 下方操作區：-1 按鈕 與 快速點擊提示條 (符合 Apple HIG 44pt 觸控目標) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 pt-2 sm:pt-2.5 border-t border-slate-100 relative z-10">
+          <button type="button" class="btn-minus px-2.5 sm:px-3.5 py-2 sm:py-2.5 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-black rounded-xl text-xs transition-all flex items-center justify-center gap-1 active:scale-90 touch-target-44" data-code="${b.code}" title="扣除 1 次">
             <span>-1</span>
           </button>
-          <div class="flex-1 py-2.5 px-3 bg-blue-50/90 group-hover:bg-[#0071e3] text-[#0071e3] group-hover:text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all border border-blue-200/80 group-hover:border-[#0071e3] shadow-2xs touch-target-44">
-            <span>👆 點擊卡片空白處直接 +1</span>
+          <div class="flex-1 py-2 sm:py-2.5 px-2 sm:px-3 bg-blue-50/90 group-hover:bg-[#0071e3] text-[#0071e3] group-hover:text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1 transition-all border border-blue-200/80 group-hover:border-[#0071e3] shadow-2xs touch-target-44">
+            <span class="sm:hidden">👆 點擊 +1</span>
+            <span class="hidden sm:inline">👆 點擊卡片空白處直接 +1</span>
           </div>
         </div>
       `;
@@ -568,8 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dom.currentPeriodTitle.innerHTML = `
       <span>${period.name} 行為觀察</span>
-      <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-        🕒 ${schedItem.timeStr}（${schedItem.desc}）
+      <span class="text-[11px] sm:text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border border-slate-200">
+        🕒 ${schedItem.timeStr}<span class="hidden sm:inline">（${schedItem.desc}）</span>
       </span>
     `;
 

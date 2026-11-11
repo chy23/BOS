@@ -14,7 +14,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>BOS 行為觀察速記與多師協同分析系統</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -26,221 +26,230 @@
 </head>
 <body class="bg-[#f5f5f7] text-[#1d1d1f] min-h-screen flex flex-col antialiased">
 
-  <!-- Apple 風格毛玻璃導覽列 (HIG 規範) -->
+  <!-- Apple 風格毛玻璃導覽列 (自適應手機 / 平板 / 電腦) -->
   <header class="apple-header sticky top-0 z-30 transition-all">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="max-w-7xl mx-auto px-3 py-2 sm:px-4 sm:py-2.5 space-y-2">
       
-      <!-- 標題與個案識別 -->
-      <div class="flex items-center gap-3">
-        <div id="bosBrandLogo" class="w-10 h-10 rounded-2xl bg-[#0071e3] text-white flex items-center justify-center font-black text-xl shadow-md shadow-blue-500/25 cursor-pointer select-none transition-transform active:scale-90">
-          B
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-base font-black text-[#1d1d1f] tracking-tight">BOS 行為觀察系統</h1>
-            <button id="btnVersionBadge" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 transition-all cursor-pointer shadow-2xs" title="查看系統版本更新紀錄">
-              <span>v3.1.0</span>
-            </button>
-            <span id="editModeBadge" class="hidden text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300">
-              ✏️ 編輯模式
-            </span>
+      <!-- 第一列：品牌標題 ＋ 記錄身分/個案快選 ＋ 雲端同步狀態 -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <!-- 標題與個案識別 -->
+        <div class="flex items-center gap-2.5">
+          <div id="bosBrandLogo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#0071e3] text-white flex items-center justify-center font-black text-lg sm:text-xl shadow-md shadow-blue-500/25 cursor-pointer select-none transition-transform active:scale-90 shrink-0" title="BOS 行為觀察系統">
+            B
           </div>
-          <p class="text-[11px] text-[#86868b] font-medium">基礎速記 ｜ 🔬 進階模式 ｜ 疾病鑑別映射 ｜ 多師協同</p>
+          <div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <h1 class="text-sm sm:text-base font-black text-[#1d1d1f] tracking-tight">BOS 行為觀察系統</h1>
+              <button id="btnVersionBadge" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 transition-all cursor-pointer shadow-2xs" title="查看系統版本更新紀錄">
+                <span>v3.1.0</span>
+              </button>
+              <span id="editModeBadge" class="hidden text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                ✏️ 編輯
+              </span>
+            </div>
+            <p class="hidden sm:block text-[11px] text-[#86868b] font-medium">基礎速記 ｜ 🔬 進階模式 ｜ 疾病鑑別映射 ｜ 多師協同</p>
+          </div>
+        </div>
+
+        <!-- 雲端同步狀態標籤與刷新 + 系統更新紀錄 (手機上保持緊湊於右上角) -->
+        <div class="flex items-center gap-1 sm:gap-1.5 ml-auto lg:order-3">
+          <button id="btnFetchCloud" type="button" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] sm:text-xs font-bold border border-blue-200 transition-colors whitespace-nowrap" title="拉取其他科任老師剛記錄的最新資料">
+            🔄 <span class="hidden sm:inline">載入</span>最新
+          </button>
+          <div id="syncBadge" class="text-[11px] sm:text-xs px-2 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700 whitespace-nowrap">
+            已同步
+          </div>
+          <button id="btnOpenChangelog" type="button" class="px-2 sm:px-2.5 py-1 sm:py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 border border-amber-200/90 rounded-xl text-[11px] sm:text-xs font-black transition-all shadow-2xs flex items-center gap-1 active:scale-95 whitespace-nowrap" title="查看系統更新紀錄與版本歷程">
+            <span>✨</span><span class="hidden sm:inline">更新紀錄</span><span class="sm:hidden">更新</span>
+            <span id="changelogNewDot" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          </button>
+        </div>
+
+        <!-- 記錄老師身分與個案切換 (手機上自動滿版對齊，平板/電腦同行排列) -->
+        <div class="w-full lg:w-auto flex flex-wrap items-center justify-between sm:justify-start gap-1.5 sm:gap-2 lg:order-2">
+          <!-- 老師稱謂 (科任/導師) -->
+          <div class="flex items-center bg-slate-200/70 p-1 rounded-xl border border-slate-300/60">
+            <span class="text-[11px] sm:text-xs font-bold text-slate-700 px-1">👩‍🏫<span class="hidden sm:inline"> 身份:</span></span>
+            <select id="observerRoleSelect" class="bg-white border border-slate-300/80 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-[#0071e3]">
+              <option value="導師" selected>導師 (班導)</option>
+              <option value="英文科任">英文科任</option>
+              <option value="自然科任">自然科任</option>
+              <option value="體育科任">體育科任</option>
+              <option value="音樂科任">音樂科任</option>
+              <option value="特教/資源班">特教/資源班</option>
+              <option value="自訂">自訂...</option>
+            </select>
+            <input type="text" id="customObserverInput" placeholder="職稱" class="hidden w-16 sm:w-20 border border-slate-300 rounded-lg px-1.5 py-1 text-xs font-bold ml-1 bg-white">
+          </div>
+
+          <!-- 個案選擇 -->
+          <div class="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 flex-1 sm:flex-initial justify-end">
+            <select id="caseSelect" class="bg-white border border-slate-300/80 text-slate-900 text-xs font-black rounded-lg px-2 sm:px-3 py-1 focus:ring-2 focus:ring-[#0071e3] flex-1 sm:flex-initial min-w-[96px]">
+              <!-- 自動注入 -->
+            </select>
+            <button id="btnNewCase" type="button" class="px-2 sm:px-2.5 py-1 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-lg text-xs font-extrabold transition-all shadow-xs flex items-center gap-0.5 active:scale-95 whitespace-nowrap" title="自動生成 3 碼英數亂碼新個案">
+              <span>✨</span><span class="hidden sm:inline">新個案</span><span class="sm:hidden">新增</span>
+            </button>
+            <button id="btnManageCases" type="button" class="px-2 sm:px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-extrabold transition-all flex items-center gap-0.5 active:scale-95 whitespace-nowrap" title="管理與刪除個案">
+              <span>👥</span><span class="hidden sm:inline">個案管理</span><span class="sm:hidden">管理</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- 記錄老師身分與個案切換 -->
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- 老師稱謂 (科任/導師) -->
-        <div class="flex items-center bg-slate-200/70 p-1 rounded-xl border border-slate-300/60">
-          <span class="text-xs font-bold text-slate-700 px-1.5">👩‍🏫 身份:</span>
-          <select id="observerRoleSelect" class="bg-white border border-slate-300/80 text-slate-900 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-[#0071e3] touch-target-44">
-            <option value="導師" selected>導師 (班導)</option>
-            <option value="英文科任">英文科任</option>
-            <option value="自然科任">自然科任</option>
-            <option value="體育科任">體育科任</option>
-            <option value="音樂科任">音樂科任</option>
-            <option value="特教/資源班">特教/資源班老師</option>
-            <option value="自訂">自訂輸入...</option>
-          </select>
-          <input type="text" id="customObserverInput" placeholder="職稱" class="hidden w-20 border border-slate-300 rounded-lg px-2 py-1.5 text-xs font-bold ml-1">
-        </div>
-
-        <!-- 個案選擇 (符合 44px 觸控目標) -->
-        <div class="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60">
-          <select id="caseSelect" class="bg-white border border-slate-300/80 text-slate-900 text-xs font-black rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#0071e3] touch-target-44">
-            <!-- 自動注入 -->
-          </select>
-          <button id="btnNewCase" type="button" class="px-3 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-lg text-xs font-extrabold transition-all shadow-xs flex items-center gap-1 active:scale-95 touch-target-44" title="自動生成 3 碼英數亂碼新個案">
-            <span>✨</span><span>新個案</span>
-          </button>
-          <button id="btnManageCases" type="button" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1 active:scale-95 touch-target-44" title="管理與刪除個案">
-            <span>👥</span><span>個案管理</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 導航分頁按鈕群 (iPadOS Segmented Control 風格) -->
-      <nav class="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 shadow-2xs flex-wrap">
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-900 shadow-xs" data-target="view-record">
+      <!-- 第二列：導航分頁按鈕群 (手機支援單列橫向滑動，絕不折行佔用高度) -->
+      <nav class="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 shadow-2xs overflow-x-auto no-scrollbar whitespace-nowrap">
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-900 shadow-xs shrink-0 flex-1 sm:flex-initial text-center" data-target="view-record">
           📝 基礎速記
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1" data-target="view-advanced">
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1 shrink-0 flex-1 sm:flex-initial" data-target="view-advanced">
           <span>🔬</span><span>進階模式</span>
           <span class="bg-indigo-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-black">PRO</span>
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-analytics">
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all shrink-0 flex-1 sm:flex-initial text-center" data-target="view-analytics">
           📈 統計與熱區
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-history">
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all shrink-0 flex-1 sm:flex-initial text-center" data-target="view-history">
           🗂 歷史紀錄
         </button>
-        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all" data-target="view-settings">
+        <button type="button" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all shrink-0 flex-1 sm:flex-initial text-center" data-target="view-settings">
           ⚙️ 雲端設定
         </button>
       </nav>
-
-      <!-- 雲端同步狀態標籤與刷新 + 系統更新紀錄 -->
-      <div class="flex items-center gap-1.5">
-        <button id="btnFetchCloud" type="button" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold border border-blue-200 transition-colors" title="拉取其他科任老師剛記錄的最新資料">
-          🔄 載入最新
-        </button>
-        <div id="syncBadge" class="text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700">
-          已同步
-        </div>
-        <button id="btnOpenChangelog" type="button" class="px-2.5 py-1.5 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 border border-amber-200/90 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1 active:scale-95 touch-target-44" title="查看系統更新紀錄與版本歷程">
-          <span>✨</span><span>更新紀錄</span>
-          <span id="changelogNewDot" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-        </button>
-      </div>
     </div>
   </header>
 
   <!-- 主內容容器 -->
-  <main class="max-w-7xl mx-auto w-full p-4 flex-1">
+  <main class="max-w-7xl mx-auto w-full p-2.5 sm:p-4 flex-1">
 
     <!-- ========================================== -->
     <!-- 1. 課堂速記視圖 (view-record) -->
     <!-- ========================================== -->
-    <section id="view-record" class="view-section space-y-4">
+    <section id="view-record" class="view-section space-y-3 sm:space-y-4">
 
       <!-- 雙模式快速切換橫幅 (基礎速記 vs 進階模式) -->
-      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 px-4 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <span class="px-2.5 py-1 rounded-lg bg-white/15 text-xs font-black tracking-wide">⚡ 基礎速記模式</span>
-          <span class="text-xs text-slate-300">原始紙本 7 代碼計次（已整合進階版之「科目、干擾強度、介入成效」快選）。如需 17 項細分行為、持續時間碼錶與疾病鑑別映射，請切換至進階模式。</span>
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-2.5 sm:p-3.5 px-3.5 sm:px-4 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+          <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/15 text-[11px] sm:text-xs font-black tracking-wide whitespace-nowrap">⚡ 基礎速記</span>
+          <span class="text-[11px] sm:text-xs text-slate-300 truncate sm:whitespace-normal">課堂 9 宮格極速記次 ＋ 科目/型態快選（如需 17 項細分行為、碼錶與鑑別映射請切至進階模式）</span>
         </div>
-        <button id="btnSwitchToAdvancedMode" type="button" class="px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer">
-          <span>🔬</span><span>切換至進階模式</span><span>➔</span>
+        <button id="btnSwitchToAdvancedMode" type="button" class="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer whitespace-nowrap">
+          <span>🔬</span><span>進階模式</span><span>➔</span>
         </button>
       </div>
 
-      <!-- 基本設定列 (日期、用藥時間、身體狀況) -->
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-4">
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-extrabold text-slate-600">觀察日期</label>
-          <input type="date" id="dateInput" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500">
+      <!-- 基本設定列 (日期、用藥時間、身體狀況：手機上自動雙欄並排，節省垂直高度) -->
+      <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 sm:gap-4">
+        <div class="flex items-center gap-1.5">
+          <label class="text-[11px] sm:text-xs font-extrabold text-slate-600 whitespace-nowrap">日期</label>
+          <input type="date" id="dateInput" class="w-full sm:w-auto border border-slate-300 rounded-xl px-2 sm:px-3 py-1 text-xs sm:text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-extrabold text-slate-600">當日用藥時間</label>
-          <input type="time" id="medTimeInput" class="border border-slate-300 rounded-xl px-3 py-1.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500">
+        <div class="flex items-center gap-1.5">
+          <label class="text-[11px] sm:text-xs font-extrabold text-slate-600 whitespace-nowrap">用藥</label>
+          <input type="time" id="medTimeInput" class="w-full sm:w-auto border border-slate-300 rounded-xl px-2 sm:px-3 py-1 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div class="flex items-center gap-2 flex-1 min-w-[240px]">
-          <label class="text-xs font-extrabold text-slate-600">身體不適備忘</label>
-          <input type="text" id="discomfortInput" placeholder="如：頭痛、未吃早餐、睡眠不足（無異常可留空）" class="flex-1 border border-slate-300 rounded-xl px-3 py-1.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500">
+        <div class="col-span-2 flex items-center gap-2 sm:flex-1 sm:min-w-[220px]">
+          <label class="text-[11px] sm:text-xs font-extrabold text-slate-600 whitespace-nowrap">身體備忘</label>
+          <input type="text" id="discomfortInput" placeholder="如：頭痛、未吃早餐、睡眠不足（無異常可留空）" class="flex-1 border border-slate-300 rounded-xl px-2.5 py-1 text-xs sm:text-sm text-slate-800 focus:ring-2 focus:ring-blue-500">
         </div>
       </div>
 
       <!-- 課表即時排程狀態列 (依課表時間自動偵測) -->
-      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-3 px-4 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-        <div class="flex items-center gap-2.5">
-          <span class="relative flex h-3 w-3">
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-2.5 sm:p-3 px-3 sm:px-4 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-emerald-500"></span>
           </span>
-          <div class="flex items-baseline gap-2">
-            <span id="liveClockDisplay" class="font-black text-slate-800 text-sm font-mono tracking-tight">--:--</span>
-            <span id="liveScheduleStatus" class="text-xs font-bold text-blue-900 bg-white/80 px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs">
+          <div class="flex items-baseline gap-1.5 sm:gap-2">
+            <span id="liveClockDisplay" class="font-black text-slate-800 text-xs sm:text-sm font-mono tracking-tight">--:--</span>
+            <span id="liveScheduleStatus" class="text-[11px] sm:text-xs font-bold text-blue-900 bg-white/80 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border border-blue-200 shadow-2xs">
               偵測課表中...
             </span>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <label class="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer select-none">
-            <input type="checkbox" id="autoTimeJumpCheckbox" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300">
-            <span>⏰ 自動依課表跳轉</span>
+        <div class="flex items-center gap-2 sm:gap-3 ml-auto">
+          <label class="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-700 cursor-pointer select-none">
+            <input type="checkbox" id="autoTimeJumpCheckbox" checked class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300">
+            <span>⏰ 自動跳轉</span>
           </label>
-          <button id="btnJumpToCurrentPeriod" type="button" class="px-3 py-1 bg-white hover:bg-blue-600 hover:text-white border border-blue-300 text-blue-700 rounded-lg text-xs font-extrabold shadow-2xs transition-all active:scale-95 flex items-center gap-1">
+          <button id="btnJumpToCurrentPeriod" type="button" class="px-2.5 py-1 bg-white hover:bg-blue-600 hover:text-white border border-blue-300 text-blue-700 rounded-lg text-[11px] sm:text-xs font-extrabold shadow-2xs transition-all active:scale-95 flex items-center gap-1">
             <span>⚡️</span>
-            <span>跳至現在課堂</span>
+            <span>現在課堂</span>
           </button>
         </div>
       </div>
 
       <!-- 節次切換列 (橫向滑動/卡片) -->
-      <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
-        <div id="periodTabsContainer" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+      <div class="bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200 shadow-xs">
+        <div id="periodTabsContainer" class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
           <!-- 自動注入 9 個節次 -->
         </div>
       </div>
 
-      <!-- 核心速記區塊 (標題、本節科目/活動快選 [由進階模式導入]、V 標記與正向行為按鈕) -->
-      <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-2.5">
-          <h2 id="currentPeriodTitle" class="text-lg font-black text-slate-900 flex items-center gap-2">
-            早自習 行為觀察
-          </h2>
-          <span id="currentPeriodObserverTag" class="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded-lg">
-            記錄者：導師
-          </span>
+      <!-- 核心速記區塊 (標題、本節科目/活動快選、V 標記與正向行為按鈕 - 自適應手機/平板/電腦) -->
+      <div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5 lg:space-y-0 lg:flex lg:flex-wrap lg:items-center lg:justify-between gap-3">
+        <div class="flex flex-wrap items-center justify-between sm:justify-start gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 id="currentPeriodTitle" class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
+              早自習 行為觀察
+            </h2>
+            <span id="currentPeriodObserverTag" class="text-[11px] sm:text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">
+              記錄者：導師
+            </span>
+          </div>
 
-          <!-- ★ 由進階模式導入基礎模式：本節科目與教學活動型態快選 -->
-          <div class="flex items-center gap-1.5 bg-blue-50/70 px-2.5 py-1 rounded-xl border border-blue-200/80">
-            <span class="text-[11px] font-extrabold text-blue-900">📚 科目:</span>
-            <select id="basicSubjectSelect" class="bg-white border border-blue-200 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
-              <option value="">未指定</option>
-              <option value="國語">國語</option>
-              <option value="數學">數學</option>
-              <option value="英語">英語</option>
-              <option value="社會">社會</option>
-              <option value="自然">自然</option>
-              <option value="健體">健體</option>
-              <option value="藝文">藝文</option>
-              <option value="綜合">綜合</option>
-              <option value="彈性/自習">彈性/自習</option>
-              <option value="下課轉銜">下課轉銜</option>
-            </select>
-            <span class="text-[11px] font-extrabold text-blue-900 ml-1">🎯 型態:</span>
-            <select id="basicActivitySelect" class="bg-white border border-blue-200 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
-              <option value="">未指定</option>
-              <option value="全班聽講">全班聽講</option>
-              <option value="個別書寫作答">個別書寫作答</option>
-              <option value="小組討論合作">小組討論合作</option>
-              <option value="多媒體/平板操作">多媒體/平板操作</option>
-              <option value="動態操作/體育競賽">動態操作/體育競賽</option>
-              <option value="收拾轉銜/移動">收拾轉銜/移動</option>
-            </select>
+          <!-- ★ 由進階模式導入基礎模式：本節科目與教學活動型態快選 (手機上自動雙欄滿版好點選) -->
+          <div class="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-1.5 bg-blue-50/70 p-1.5 sm:px-2.5 sm:py-1 rounded-xl border border-blue-200/80">
+            <div class="flex items-center gap-1">
+              <span class="text-[11px] font-extrabold text-blue-900 whitespace-nowrap">📚 科目:</span>
+              <select id="basicSubjectSelect" class="w-full sm:w-auto bg-white border border-blue-200 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
+                <option value="">未指定</option>
+                <option value="國語">國語</option>
+                <option value="數學">數學</option>
+                <option value="英語">英語</option>
+                <option value="社會">社會</option>
+                <option value="自然">自然</option>
+                <option value="健體">健體</option>
+                <option value="藝文">藝文</option>
+                <option value="綜合">綜合</option>
+                <option value="彈性/自習">彈性/自習</option>
+                <option value="下課轉銜">下課轉銜</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-[11px] font-extrabold text-blue-900 whitespace-nowrap">🎯 型態:</span>
+              <select id="basicActivitySelect" class="w-full sm:w-auto bg-white border border-blue-200 text-slate-800 text-xs font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500">
+                <option value="">未指定</option>
+                <option value="全班聽講">全班聽講</option>
+                <option value="個別書寫作答">個別書寫作答</option>
+                <option value="小組討論合作">小組討論合作</option>
+                <option value="多媒體/平板操作">多媒體/平板操作</option>
+                <option value="動態操作/體育競賽">動態操作/體育競賽</option>
+                <option value="收拾轉銜/移動">收拾轉銜/移動</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="grid grid-cols-2 sm:flex items-center gap-2 w-full lg:w-auto">
           <!-- 正向良好行為加分卡 -->
-          <button id="btnPositiveBehavior" type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-sm flex items-center gap-1.5 active:scale-95 transition-all">
-            <span>★ 正向良好適應行為</span>
+          <button id="btnPositiveBehavior" type="button" class="px-3 py-2 sm:px-3.5 sm:py-1.5 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+            <span>★ 正向好行為</span>
             <span id="positiveCountBadge" class="bg-amber-700 text-white px-1.5 py-0.5 rounded-full text-[11px]">0 次</span>
           </button>
           
-          <button id="btnMarkV" type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border-2 border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50 transition-all shadow-xs">
-            標記本節為：V 常態穩定
+          <button id="btnMarkV" type="button" class="px-3 py-2 sm:px-3.5 sm:py-1.5 rounded-xl text-xs font-bold border-2 border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50 transition-all shadow-xs text-center">
+            標記：V 常態穩定
           </button>
         </div>
       </div>
 
-      <!-- 6 大代號速記按鈕網格 (加大按鈕以利平板快速點擊) -->
-      <div id="behaviorCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <!-- 9 大代號速記按鈕網格 (手機雙欄緊湊拇指網格、平板與電腦 3×3 九宮格) -->
+      <div id="behaviorCardsContainer" class="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3.5">
         <!-- 由 app.js 動態渲染 -->
       </div>
 
@@ -314,23 +323,23 @@
         </div>
       </details>
 
-      <!-- 底部浮動操作列 (支援科任單節送出與全日儲存) -->
-      <div class="bg-white p-3.5 px-4 rounded-2xl border border-slate-200 shadow-md flex flex-wrap items-center justify-between gap-3 sticky bottom-4 z-20">
-        <div class="flex items-center gap-2">
-          <button id="btnResetPeriod" type="button" class="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors">
-            清空本節
+      <!-- 底部浮動操作列 (支援科任單節送出與全日儲存 - 手機單手拇指友善排版) -->
+      <div class="bg-white/95 backdrop-blur-md p-2.5 sm:p-3.5 px-3 sm:px-4 rounded-2xl border border-slate-200 shadow-lg flex flex-wrap items-center justify-between gap-2 sticky bottom-2 sm:bottom-4 z-20 safe-area-bottom">
+        <div class="flex items-center gap-1.5">
+          <button id="btnResetPeriod" type="button" class="px-2.5 sm:px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors whitespace-nowrap">
+            清空<span class="hidden sm:inline">本節</span>
+          </button>
+          <button id="btnExportDailyWord" type="button" class="px-2.5 sm:px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1 whitespace-nowrap">
+            <span>📄</span><span><span class="hidden sm:inline">匯出 </span>Word</span>
           </button>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5">
-          <button id="btnExportDailyWord" type="button" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1">
-            <span>📄</span><span>匯出 Word</span>
+        <div class="flex items-center gap-1.5 sm:gap-2.5 flex-1 sm:flex-initial justify-end">
+          <button id="btnSaveSinglePeriod" type="button" class="flex-1 sm:flex-initial justify-center px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap" title="科任老師專用：僅送出此堂課，不覆蓋其他老師紀錄">
+            <span>🚀</span><span><span class="hidden sm:inline">僅儲存/同步</span>本節<span class="hidden md:inline"> (科任專用)</span></span>
           </button>
-          <button id="btnSaveSinglePeriod" type="button" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-95 flex items-center gap-1" title="科任老師專用：僅送出此堂課，不覆蓋其他老師紀錄">
-            <span>🚀</span><span>僅儲存/同步本節 (科任專用)</span>
-          </button>
-          <button id="btnSaveDay" type="button" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-1.5">
-            <span>💾</span><span>儲存此日全天紀錄</span>
+          <button id="btnSaveDay" type="button" class="flex-1 sm:flex-initial justify-center px-3.5 sm:px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap">
+            <span>💾</span><span>儲存全天<span class="hidden sm:inline">紀錄</span></span>
           </button>
         </div>
       </div>
@@ -339,33 +348,33 @@
     <!-- ========================================== -->
     <!-- 1.5 進階模式 (view-advanced) - 經統整簡化之高效三步介面 -->
     <!-- ========================================== -->
-    <section id="view-advanced" class="view-section hidden space-y-5">
+    <section id="view-advanced" class="view-section hidden space-y-4 sm:space-y-5">
 
       <!-- 進階模式頂部標題與控制列 (統整自動綁定資訊，收合次要技術欄位) -->
-      <div class="bg-gradient-to-r from-indigo-950 via-slate-900 to-blue-950 text-white p-4 sm:p-5 rounded-3xl shadow-md space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-xl">
+      <div class="bg-gradient-to-r from-indigo-950 via-slate-900 to-blue-950 text-white p-3.5 sm:p-5 rounded-3xl shadow-md space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+          <div class="flex items-center gap-2.5 sm:gap-3">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-lg sm:text-xl shrink-0">
               🔬
             </div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <h2 class="text-base sm:text-lg font-black tracking-tight">進階模式（課堂行為量化與臨床鑑別評估）</h2>
+                <h2 class="text-sm sm:text-lg font-black tracking-tight">進階模式（課堂行為量化與臨床鑑別評估）</h2>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   已精簡統整 · 3 步快速完成
                 </span>
               </div>
-              <p class="text-xs text-slate-300 mt-0.5">
+              <p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">
                 點選「具體誘發情境」與「17 項行為代碼」，系統自動歸類向度、自動映射關聯疾病指標並產出標準 JSON 與鑑別報表。
               </p>
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="btnSwitchToBasicMode" type="button" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition-all cursor-pointer">
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+            <button id="btnSwitchToBasicMode" type="button" class="flex-1 sm:flex-initial justify-center px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition-all cursor-pointer flex items-center gap-1">
               ⬅ 返回基礎速記
             </button>
-            <button id="btnScrollToMappingTable" type="button" class="px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer">
+            <button id="btnScrollToMappingTable" type="button" class="flex-1 sm:flex-initial justify-center px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer">
               <span>📖</span><span>展開臨床鑑別總表</span>
             </button>
           </div>
@@ -373,9 +382,9 @@
 
         <!-- 簡化統整 1：自動綁定識別列（預設隱藏手動框，點擊可微調） -->
         <details class="bg-white/10 rounded-xl px-3.5 py-2 border border-white/10 text-xs">
-          <summary class="cursor-pointer font-bold text-slate-200 flex items-center justify-between select-none">
-            <span>🔗 自動綁定系統編號與時間（點擊可展開手動微調 <code>record_id</code> / <code>student_id</code> / <code>timestamp</code>）</span>
-            <span class="text-emerald-300 font-mono text-[11px]">✓ 自動生成中</span>
+          <summary class="cursor-pointer font-bold text-slate-200 flex items-center justify-between select-none gap-2">
+            <span class="truncate">🔗 自動綁定系統編號與時間（點擊可展開手動微調）</span>
+            <span class="text-emerald-300 font-mono text-[11px] shrink-0">✓ 自動生成中</span>
           </summary>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 mt-2 border-t border-white/10">
             <div class="flex items-center justify-between gap-2">
@@ -395,34 +404,34 @@
       </div>
 
       <!-- 主表單雙欄配置：左側統整為 3 大精簡卡片、右側即時臨床鑑別卡 -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
 
         <!-- 左側 8 欄：統整後之三大步驟卡片 -->
         <div class="lg:col-span-8 space-y-4">
 
           <!-- 統整卡片 1：課堂情境與誘發前因 (Context + Antecedent 二合一) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3.5 sm:space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-1">
               <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-black">1</span>
+                <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-black shrink-0">1</span>
                 <span>課堂情境與誘發前因 (Context &amp; Antecedent A)</span>
               </h3>
               <span class="text-[11px] text-slate-500">點選具體誘發描述，自動歸入前因主分類</span>
             </div>
 
-            <!-- 節次 + 科目 + 活動型態 緊湊排列 -->
+            <!-- 節次 + 科目 + 活動型態 緊湊排列 (手機支援橫向滑動或網格點選) -->
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div class="md:col-span-12">
                 <label class="text-xs font-extrabold text-slate-700 block mb-1.5">課堂時段 / 節次（與基礎模式實體課表同步）：</label>
-                <div id="advPeriodPills" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1"></div>
+                <div id="advPeriodPills" class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1"></div>
               </div>
               <div class="md:col-span-7">
                 <label class="text-xs font-extrabold text-slate-700 block mb-1.5">課堂科目 (<code>subject</code>)：</label>
-                <div id="advSubjectPills" class="flex flex-wrap gap-1.5"></div>
+                <div id="advSubjectPills" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap py-0.5"></div>
               </div>
               <div class="md:col-span-5">
                 <label class="text-xs font-extrabold text-slate-700 block mb-1.5">教學活動型態 (<code>activity_type</code>)：</label>
-                <div id="advActivityPills" class="flex flex-wrap gap-1.5"></div>
+                <div id="advActivityPills" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap py-0.5"></div>
               </div>
             </div>
 
@@ -454,17 +463,17 @@
           </div>
 
           <!-- 統整卡片 2：核心外顯行為與量化指標 (Behavior B + Metrics 二合一) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3.5 sm:space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
               <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs flex items-center justify-center font-black">2</span>
+                <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs flex items-center justify-center font-black shrink-0">2</span>
                 <span>核心外顯行為與量化指標 (Behavior B &amp; Metrics)</span>
               </h3>
               <span class="text-[11px] text-indigo-700 font-bold">點選行為代碼自動推論向度與關聯疾病標籤</span>
             </div>
 
-            <!-- 行為向度篩選列 -->
-            <div id="advBehaviorCategoryTabs" class="flex flex-wrap gap-1.5"></div>
+            <!-- 行為向度篩選列 (手機橫向滑動) -->
+            <div id="advBehaviorCategoryTabs" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap py-0.5"></div>
 
             <!-- 17 項行為代碼網格 -->
             <div id="advBehaviorTargetGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
@@ -487,7 +496,7 @@
                     </button>
                   </div>
                   <div class="flex items-center gap-1 flex-wrap">
-                    <input type="number" id="advDurationInput" min="0" step="0.5" value="5" class="w-14 text-center font-black text-sm border border-slate-300 rounded-lg py-0.5 bg-white tabular-numbers">
+                    <input type="number" id="advDurationInput" min="0" step="0.5" value="0" class="w-14 text-center font-black text-sm border border-slate-300 rounded-lg py-0.5 bg-white tabular-numbers">
                     <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="1">1m</button>
                     <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="3">3m</button>
                     <button type="button" class="adv-dur-preset px-1.5 py-0.5 rounded bg-white border border-slate-300 text-[10px] font-bold hover:bg-blue-50" data-min="8">8m</button>
@@ -509,10 +518,10 @@
           </div>
 
           <!-- 統整卡片 3：介入處置與成效 (Intervention C & Notes) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div class="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3.5 sm:space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h3 class="font-black text-slate-900 text-sm flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs flex items-center justify-center font-black">3</span>
+                <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs flex items-center justify-center font-black shrink-0">3</span>
                 <span>介入處置與成效 (Intervention C &amp; Notes)</span>
               </h3>
             </div>
@@ -538,7 +547,7 @@
                 <span>🔗 同步累加至「基礎速記表」對應節次與行為次數</span>
               </label>
 
-              <button type="button" id="btnSaveAdvRecord" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer">
+              <button type="button" id="btnSaveAdvRecord" class="w-full sm:w-auto justify-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer">
                 <span>💾</span><span>儲存進階紀錄 (並同步雲端)</span>
               </button>
             </div>

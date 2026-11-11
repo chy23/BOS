@@ -1,4 +1,13 @@
-/* 平板速記專用樣式 (Apple HIG & Apple Design 旗艦優化) */
+/**
+ * ============================================================================
+ * 檔案名稱：css/styles.css
+ * 模組職責：BOS 行為觀察速記系統 — Apple HIG 響應式樣式與 60fps 微動畫引擎
+ * 系統設計者 (System Architect & Designer)：Chiahua (chy23)
+ * 設計說明：
+ *   1. 自適應手機 (Mobile <640px)、平板 (iPad 768px~1024px) 與桌機螢幕。
+ *   2. 支援 iOS Safe Area 底部邊界保護、44×44pt 最小觸控目標、零延遲觸控回饋。
+ * ============================================================================
+ */
 :root {
   --primary: #0071e3;
   --primary-hover: #0077ed;
@@ -227,4 +236,31 @@ input, textarea, select {
 .watermark-anim {
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
   animation-duration: 2.5s !important;
+}
+
+/* =================================================== */
+/* 手機 / 平板 / 電腦 跨裝置自適應與安全區域優化 (RWD) */
+/* =================================================== */
+.safe-area-bottom {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+
+button, select, input, a, summary {
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  .behavior-card {
+    border-radius: 18px;
+  }
+  .touch-target-44 {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watermark-anim, .number-pop {
+    animation: none !important;
+  }
 }

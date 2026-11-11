@@ -1,7 +1,12 @@
 /**
- * ClinicalAdvanced: 進階臨床行為觀察、JSON Schema 驗證與疾病鑑別推論引擎
- * 支援 Draft 2020-12 ClassroomBehaviorRecord 資料結構、17 項核心外顯行為、
- * 誘發因子歸因、介入成效評估及臨床鑑別診斷指標映射。
+ * ============================================================================
+ * 檔案名稱：js/clinical-advanced.js
+ * 模組職責：進階行為觀察、JSON Schema 驗證與疾病鑑別推論引擎
+ * 系統設計者 (System Architect & Designer)：Chiahua (chy23)
+ * 設計說明：
+ *   支援 Draft 2020-12 ClassroomBehaviorRecord 資料結構、17 項核心外顯行為、
+ *   誘發因子歸因、介入成效評估及 9 大臨床鑑別診斷指標 (related_conditions) 映射。
+ * ============================================================================
  */
 class ClinicalAdvancedManager {
   constructor() {

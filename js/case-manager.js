@@ -107,15 +107,61 @@ class CaseManager {
   }
 
   /**
+   * 取得單一個案物件
+   */
+  getCaseById(caseId) {
+    const cases = this.getAllCases();
+    return cases.find(c => c.id === caseId) || null;
+  }
+
+  /**
    * 更新個案本機備忘註記
    */
   updateLocalNote(caseId, note) {
     const cases = this.getAllCases();
     const target = cases.find(c => c.id === caseId);
     if (target) {
-      target.localNote = note;
+      target.localNote = (note || '').trim();
       localStorage.setItem(this.storageKey, JSON.stringify(cases));
     }
+  }
+
+  /**
+   * 檢查備註是否疑似包含可直接識別個案身分的敏感資訊 (PII 防呆檢測)
+   * @param {string} note
+   * @returns {{ hasRisk: boolean, reasons: string[] }}
+   */
+  checkPotentialPII(note) {
+    const text = (note || '').trim();
+    if (!text) return { hasRisk: false, reasons: [] };
+
+    const reasons = [];
+
+    // 1. 台灣身分證字號格式 (1英文 + 9數字)
+    if (/[A-Za-z][1289]\d{8}/.test(text)) {
+      reasons.push('偵測到疑似「身分證字號」格式');
+    }
+
+    // 2. 連續 5 碼以上數字 (疑似學號、手機號碼或生日)
+    if (/\d{5,}/.test(text)) {
+      reasons.push('偵測到連續 5 碼以上數字（疑似完整學號、電話或生日）');
+    }
+
+    // 3. 敏感關鍵字
+    if (/(身分證|學號|全名|本名|電話|手機|住址|地址)/.test(text)) {
+      reasons.push('包含「學號 / 身分證 / 電話 / 地址」等直接個資字眼');
+    }
+
+    // 4. 疑似直接輸入 2~3 字中文真實全名 (純中文 2~3 字，且不含常見匿名特徵詞)
+    const safeFeatureWords = /(個案|學生|同學|小|阿|哥|姐|妹|弟|生|班|年|組|號|座|靠|窗|門|前|後|排|戴|眼鏡|水壺|貼紙|恐龍|藍|紅|綠|黃|特|資|A|B|C|D)/i;
+    if (/^[\u4e00-\u9fa5]{2,3}$/.test(text) && !safeFeatureWords.test(text)) {
+      reasons.push('備註為 2～3 個純中文字，請確認是否誤填「學生真實全名」');
+    }
+
+    return {
+      hasRisk: reasons.length > 0,
+      reasons
+    };
   }
 
   /**

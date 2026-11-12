@@ -133,12 +133,35 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCopyBackendCode: document.getElementById('btnCopyBackendCode'),
     backendCodeTextarea: document.getElementById('backendCodeTextarea'),
 
-    // 個案管理彈窗
+    // 個案管理彈窗与快速備註
     caseManagerModal: document.getElementById('caseManagerModal'),
     btnCloseCaseModal: document.getElementById('btnCloseCaseModal'),
     btnModalClose: document.getElementById('btnModalClose'),
     btnModalAddNewCase: document.getElementById('btnModalAddNewCase'),
     caseModalList: document.getElementById('caseModalList'),
+    btnQuickCaseNote: document.getElementById('btnQuickCaseNote'),
+    quickCaseNoteLabel: document.getElementById('quickCaseNoteLabel'),
+
+    // 個案備註設定與個資去識別化提醒彈窗
+    caseNotePrivacyModal: document.getElementById('caseNotePrivacyModal'),
+    caseNoteModalTitle: document.getElementById('caseNoteModalTitle'),
+    caseNoteTargetCode: document.getElementById('caseNoteTargetCode'),
+    caseNoteModalInput: document.getElementById('caseNoteModalInput'),
+    caseNotePiiRiskBox: document.getElementById('caseNotePiiRiskBox'),
+    btnCloseCaseNoteModal: document.getElementById('btnCloseCaseNoteModal'),
+    btnCancelCaseNoteModal: document.getElementById('btnCancelCaseNoteModal'),
+    btnSaveCaseNoteModal: document.getElementById('btnSaveCaseNoteModal'),
+
+    // 未綁定 Google 雲端試算表防遺失提醒橫幅與彈窗
+    unboundCloudAlertBanner: document.getElementById('unboundCloudAlertBanner'),
+    btnBannerGoBindCloud: document.getElementById('btnBannerGoBindCloud'),
+    btnBannerDismissCloudAlert: document.getElementById('btnBannerDismissCloudAlert'),
+    settingsCloudBindBadge: document.getElementById('settingsCloudBindBadge'),
+    unboundCloudReminderModal: document.getElementById('unboundCloudReminderModal'),
+    unboundModalSavedMsg: document.getElementById('unboundModalSavedMsg'),
+    btnCloseUnboundModal: document.getElementById('btnCloseUnboundModal'),
+    btnUnboundKeepLocal: document.getElementById('btnUnboundKeepLocal'),
+    btnUnboundGoSettings: document.getElementById('btnUnboundGoSettings'),
 
     // 系統版本與更新紀錄彈窗
     changelogModal: document.getElementById('changelogModal'),
@@ -151,6 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnFooterSecurity: document.getElementById('btnFooterSecurity'),
     changelogNewDot: document.getElementById('changelogNewDot')
   };
+
+  let sessionDismissedCloudBanner = false;
+  let editingNoteCaseId = null;
 
   // ===================== 更新紀錄彈窗 (Changelog) =====================
   function openChangelogModal() {
@@ -281,17 +307,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // ===================== 個案選擇與管理 =====================
+  // ===================== 個案選擇、防遺忘備註與個資去識別化提醒 =====================
   function renderCaseOptions() {
     const cases = window.CaseManager.getAllCases();
     dom.caseSelect.innerHTML = '';
     if (dom.analyticsCaseSelect) dom.analyticsCaseSelect.innerHTML = '';
 
+    let activeCaseObj = null;
+
     cases.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = `個案代號：${c.id} ${c.localNote ? `(${c.localNote})` : ''}`;
-      if (c.id === currentCaseId) opt.selected = true;
+      opt.textContent = c.localNote ? `個案：${c.id}（${c.localNote}）` : `個案代號：${c.id}`;
+      if (c.id === currentCaseId) {
+        opt.selected = true;
+        activeCaseObj = c;
+      }
       dom.caseSelect.appendChild(opt);
 
       if (dom.analyticsCaseSelect) {
@@ -299,6 +330,119 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.analyticsCaseSelect.appendChild(opt2);
       }
     });
+
+    // 同步更新頂部導覽列「🏷️ 備註」快速按鈕顯示
+    if (dom.quickCaseNoteLabel && dom.btnQuickCaseNote) {
+      if (activeCaseObj && activeCaseObj.localNote) {
+        dom.quickCaseNoteLabel.textContent = activeCaseObj.localNote;
+        dom.btnQuickCaseNote.title = `個案 ${currentCaseId} 備註：${activeCaseObj.localNote}（點擊修改）`;
+        dom.btnQuickCaseNote.className = 'px-2 sm:px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-lg text-xs font-black transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap cursor-pointer';
+      } else {
+        dom.quickCaseNoteLabel.textContent = '加備註';
+        dom.btnQuickCaseNote.title = `為個案 ${currentCaseId} 設定防遺忘備註（請勿填寫真實姓名或學號）`;
+        dom.btnQuickCaseNote.className = 'px-2 sm:px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-extrabold transition-all flex items-center gap-0.5 active:scale-95 whitespace-nowrap cursor-pointer';
+      }
+    }
+
+    // 同步更新進階模式的學生代碼徽章
+    const studentBadge = document.getElementById('advCurrentStudentBadge');
+    if (studentBadge) {
+      studentBadge.textContent = activeCaseObj && activeCaseObj.localNote
+        ? `學生代碼：${currentCaseId}（${activeCaseObj.localNote}）`
+        : `學生代碼：${currentCaseId}`;
+    }
+  }
+
+  /**
+   * 設定個案備註後，強制跳出「避免出現足以辨識個案身分資訊」的提醒通知
+   */
+  function showPostNotePrivacyReminder(caseId, note) {
+    const cleanNote = (note || '').trim();
+    if (!cleanNote) {
+      showToast(`已清除個案【${caseId}】之本機備註`, 'info');
+      return;
+    }
+
+    const piiCheck = window.CaseManager.checkPotentialPII(cleanNote);
+    const riskWarningText = piiCheck.hasRisk
+      ? `\n\n🚨【系統偵測到高風險個資特徵】\n・${piiCheck.reasons.join('\n・')}\n強烈建議您立即改用匿名特徵代稱！`
+      : '';
+
+    const keepSetting = confirm(
+      `🛡️【個資去識別化安全提醒】\n` +
+      `您已將個案【${caseId}】的防遺忘備註設為：「${cleanNote}」${riskWarningText}\n\n` +
+      `請務必確認此備註【未包含】足以直接辨識個案身分的資訊：\n` +
+      `❌ 請勿填寫：真實全名、完整學號、身分證字號、電話\n` +
+      `✅ 建議改用：座位或特徵代稱（如：靠窗戴眼鏡、恐龍水壺、3年級A生）\n\n` +
+      `（此備註僅存於本機瀏覽器，不會上傳雲端或匯出至報表）\n` +
+      `・點擊「確定」：確認不含可辨識個資並保留備註\n` +
+      `・點擊「取消」：立即重新修改備註`
+    );
+
+    if (!keepSetting) {
+      openCaseNotePrivacyModal(caseId, false);
+    } else {
+      showToast(`🛡️ 已儲存個案【${caseId}】備註（${cleanNote}），請持續留意螢幕隱私安全`, 'success');
+    }
+  }
+
+  function updatePiiRiskBoxInModal(val) {
+    if (!dom.caseNotePiiRiskBox) return;
+    const check = window.CaseManager.checkPotentialPII(val);
+    if (check.hasRisk) {
+      dom.caseNotePiiRiskBox.classList.remove('hidden');
+      dom.caseNotePiiRiskBox.innerHTML = `🚨 <b>注意！偵測到疑似可直接辨識身分之資訊：</b><br/>・${check.reasons.join('<br/>・')}<br/><span class="text-[11px] font-normal">建議改用座位或物品特徵（如：靠窗戴眼鏡、恐龍鉛筆盒）。</span>`;
+    } else {
+      dom.caseNotePiiRiskBox.classList.add('hidden');
+      dom.caseNotePiiRiskBox.innerHTML = '';
+    }
+  }
+
+  function openCaseNotePrivacyModal(caseId, isNewCase = false) {
+    editingNoteCaseId = caseId || currentCaseId;
+    const caseObj = window.CaseManager.getCaseById(editingNoteCaseId);
+    if (!dom.caseNotePrivacyModal) return;
+
+    if (dom.caseNoteModalTitle) {
+      dom.caseNoteModalTitle.textContent = isNewCase
+        ? `✨ 新個案【${editingNoteCaseId}】已建立 — 設定防遺忘備註`
+        : `🏷️ 設定個案【${editingNoteCaseId}】本機備註`;
+    }
+    if (dom.caseNoteTargetCode) {
+      dom.caseNoteTargetCode.textContent = editingNoteCaseId;
+    }
+    if (dom.caseNoteModalInput) {
+      dom.caseNoteModalInput.value = (caseObj && caseObj.localNote) ? caseObj.localNote : '';
+      updatePiiRiskBoxInModal(dom.caseNoteModalInput.value);
+    }
+
+    dom.caseNotePrivacyModal.classList.remove('hidden');
+    setTimeout(() => {
+      if (dom.caseNoteModalInput) dom.caseNoteModalInput.focus();
+    }, 60);
+  }
+
+  function closeCaseNotePrivacyModal() {
+    if (dom.caseNotePrivacyModal) {
+      dom.caseNotePrivacyModal.classList.add('hidden');
+    }
+  }
+
+  function handleSaveCaseNoteFromModal() {
+    if (!editingNoteCaseId || !dom.caseNoteModalInput) return;
+    const noteVal = dom.caseNoteModalInput.value.trim();
+    window.CaseManager.updateLocalNote(editingNoteCaseId, noteVal);
+    closeCaseNotePrivacyModal();
+    renderCaseOptions();
+    if (!dom.caseManagerModal.classList.contains('hidden')) {
+      renderCaseModalList();
+    }
+    // 設定後跳出提醒，避免出現足以辨識個案身分的資訊
+    if (noteVal) {
+      showPostNotePrivacyReminder(editingNoteCaseId, noteVal);
+    } else {
+      showToast(`已清除個案【${editingNoteCaseId}】之本機備註`, 'info');
+    }
   }
 
   function handleCreateNewCase() {
@@ -306,7 +450,12 @@ document.addEventListener('DOMContentLoaded', () => {
     currentCaseId = newCase.id;
     renderCaseOptions();
     loadExistingRecordForDate(currentCaseId, dom.dateInput.value);
+    if (!dom.caseManagerModal.classList.contains('hidden')) {
+      renderCaseModalList();
+    }
     showToast(`已生成新個案匿名代號：【${newCase.id}】`, 'success');
+    // 引導使用者為新生成的亂碼設定防遺忘備註（含個資提醒）
+    openCaseNotePrivacyModal(newCase.id, true);
   }
 
   // ===================== 個案管理彈窗 (Modal) =====================
@@ -336,41 +485,56 @@ document.addEventListener('DOMContentLoaded', () => {
       const div = document.createElement('div');
       div.className = `p-3 rounded-xl border transition-all ${
         isCurrent ? 'bg-blue-50/60 border-blue-300 ring-1 ring-blue-300' : 'bg-white border-slate-200'
-      } flex items-center justify-between gap-3`;
+      } flex flex-col sm:flex-row sm:items-center justify-between gap-2.5`;
 
       div.innerHTML = `
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
             <span class="text-sm font-black text-blue-700 font-mono tracking-wider">${c.id}</span>
             ${isCurrent ? '<span class="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.2 rounded-md">作用中</span>' : ''}
+            <span class="text-[10px] text-slate-500">累計：${stats.recordDays} 天 ｜ ${stats.totalBehaviors} 次行為</span>
           </div>
-          <div class="flex items-center gap-2 mt-1">
-            <input type="text" value="${c.localNote || ''}" placeholder="點擊填寫本機備忘(如：個案A)" class="note-input text-xs border border-slate-200 rounded-md px-2 py-0.5 w-44 text-slate-700 focus:ring-1 focus:ring-blue-500" data-id="${c.id}">
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <span class="text-[11px] font-bold text-slate-600 whitespace-nowrap">🏷️ 備註:</span>
+            <input type="text" value="${c.localNote || ''}" maxlength="24" placeholder="防遺忘提示 (勿填真名/學號，如：靠窗戴眼鏡)" class="note-input text-xs border border-slate-300 rounded-lg px-2.5 py-1 flex-1 min-w-0 text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 bg-white" data-id="${c.id}">
+            <button type="button" class="btn-save-note px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 whitespace-nowrap cursor-pointer" data-id="${c.id}">
+              儲存備註
+            </button>
           </div>
-          <p class="text-[10px] text-slate-500 mt-0.5">累計紀錄：${stats.recordDays} 天 ｜ ${stats.totalBehaviors} 次行為</p>
         </div>
 
-        <div class="flex items-center gap-1.5">
-          <button type="button" class="btn-select-case px-2.5 py-1 text-xs font-bold rounded-lg ${isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}" data-id="${c.id}">
+        <div class="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+          <button type="button" class="btn-select-case px-2.5 py-1 text-xs font-bold rounded-lg cursor-pointer ${isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}" data-id="${c.id}">
             ${isCurrent ? '使用中' : '切換'}
           </button>
-          <button type="button" class="btn-delete-case p-1 px-2 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors" data-id="${c.id}" title="刪除個案">
+          <button type="button" class="btn-delete-case p-1 px-2 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" data-id="${c.id}" title="刪除個案">
             🗑️ 刪除
           </button>
         </div>
       `;
 
-      // 監聽備忘輸入
       const noteInput = div.querySelector('.note-input');
-      noteInput.addEventListener('change', (e) => {
-        window.CaseManager.updateLocalNote(c.id, e.target.value.trim());
-        showToast(`已儲存個案 ${c.id} 之本機備忘`, 'info');
-      });
+      const btnSaveNote = div.querySelector('.btn-save-note');
+
+      const saveThisCaseNote = () => {
+        const newNote = noteInput.value.trim();
+        window.CaseManager.updateLocalNote(c.id, newNote);
+        renderCaseOptions();
+        if (newNote) {
+          showPostNotePrivacyReminder(c.id, newNote);
+        } else {
+          showToast(`已清除個案【${c.id}】之本機備註`, 'info');
+        }
+      };
+
+      noteInput.addEventListener('change', saveThisCaseNote);
+      btnSaveNote.addEventListener('click', saveThisCaseNote);
 
       // 切換個案
       div.querySelector('.btn-select-case').addEventListener('click', () => {
         currentCaseId = c.id;
         window.CaseManager.setActiveCase(currentCaseId);
+        renderCaseOptions();
         loadExistingRecordForDate(currentCaseId, dom.dateInput.value);
         renderCaseModalList();
       });
@@ -733,6 +897,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ===================== 未綁定 Google 雲端試算表防遺失提醒 =====================
+  function openUnboundCloudReminderModal(savedMsg) {
+    if (!dom.unboundCloudReminderModal) return;
+    if (dom.unboundModalSavedMsg && savedMsg) {
+      dom.unboundModalSavedMsg.textContent = savedMsg;
+    }
+    dom.unboundCloudReminderModal.classList.remove('hidden');
+  }
+
+  function closeUnboundCloudReminderModal() {
+    if (dom.unboundCloudReminderModal) {
+      dom.unboundCloudReminderModal.classList.add('hidden');
+    }
+  }
+
+  function jumpToGoogleSettingsAndFocus() {
+    closeUnboundCloudReminderModal();
+    switchTab('view-settings');
+    setTimeout(() => {
+      if (dom.apiUrlInput) {
+        dom.apiUrlInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        dom.apiUrlInput.focus();
+      }
+    }, 80);
+  }
+
   // ===================== 多師協同：單節儲存與全日儲存 =====================
   async function handleSaveSinglePeriod() {
     saveCurrentPeriodInputs();
@@ -740,6 +930,14 @@ document.addEventListener('DOMContentLoaded', () => {
     period.observer = getActiveObserver();
 
     window.GoogleSync.saveLocalRecord(dayRecord);
+    renderPeriodTabs();
+
+    if (!window.GoogleSync.getApiUrl()) {
+      updateSyncStatusBadge();
+      openUnboundCloudReminderModal(`【${period.name}】觀察紀錄已先暫存於目前瀏覽器，但您尚未綁定 Google 試算表！`);
+      return;
+    }
+
     showToast(`正在上傳【${period.name}】(${period.observer}) 紀錄至 Google 試算表...`, 'info');
 
     const res = await window.GoogleSync.syncSinglePeriodToGoogle(
@@ -767,6 +965,14 @@ document.addEventListener('DOMContentLoaded', () => {
     dayRecord.discomfort = dom.discomfortInput.value;
 
     window.GoogleSync.saveLocalRecord(dayRecord);
+
+    if (!window.GoogleSync.getApiUrl()) {
+      updateSyncStatusBadge();
+      renderHistoryTable();
+      openUnboundCloudReminderModal(`個案【${currentCaseId}】(${dayRecord.date}) 全日紀錄已暫存於本機瀏覽器，但尚未綁定 Google 試算表！`);
+      return;
+    }
+
     showToast('已儲存全天紀錄至本機！正在同步至雲端...', 'info');
 
     const syncRes = await window.GoogleSync.syncRecordToGoogle(dayRecord);
@@ -782,6 +988,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function handleFetchCloud() {
+    if (!window.GoogleSync.getApiUrl()) {
+      openUnboundCloudReminderModal('您尚未綁定 Google 試算表網址，無法拉取雲端跨科任老師的最新資料。');
+      return;
+    }
     showToast('正在向 Google 試算表拉取最新全校/科任整合資料...', 'info');
     const res = await window.GoogleSync.fetchCloudRecord(currentCaseId, dom.dateInput.value);
     if (res.success && res.record) {
@@ -1052,14 +1262,43 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateSyncStatusBadge() {
+    const apiUrl = window.GoogleSync.getApiUrl();
     const all = window.GoogleSync.getAllLocalRecords();
     const pending = all.filter(r => r.pendingSync).length;
-    if (pending > 0) {
-      dom.syncBadge.textContent = `待同步: ${pending}`;
-      dom.syncBadge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-700';
+
+    // 1. 更新設定頁的綁定狀態標籤
+    if (dom.settingsCloudBindBadge) {
+      if (apiUrl) {
+        dom.settingsCloudBindBadge.textContent = '✅ 已綁定 Google 雲端試算表';
+        dom.settingsCloudBindBadge.className = 'px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300';
+      } else {
+        dom.settingsCloudBindBadge.textContent = '⚠️ 尚未綁定雲端試算表（資料僅存本機）';
+        dom.settingsCloudBindBadge.className = 'px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300';
+      }
+    }
+
+    // 2. 更新頁面頂部常駐防遺失提醒橫幅
+    if (dom.unboundCloudAlertBanner) {
+      if (!apiUrl && !sessionDismissedCloudBanner) {
+        dom.unboundCloudAlertBanner.classList.remove('hidden');
+      } else {
+        dom.unboundCloudAlertBanner.classList.add('hidden');
+      }
+    }
+
+    // 3. 更新右上角同步狀態徽章
+    if (!apiUrl) {
+      dom.syncBadge.textContent = pending > 0 ? `⚠️ 未綁定雲端 (本機${pending}筆)` : '⚠️ 未綁定雲端';
+      dom.syncBadge.title = '尚未綁定 Google 試算表，點擊立即前往設定避免資料遺失！';
+      dom.syncBadge.className = 'text-[11px] sm:text-xs px-2.5 py-1 rounded-full font-extrabold bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 whitespace-nowrap cursor-pointer transition-colors';
+    } else if (pending > 0) {
+      dom.syncBadge.textContent = `⏳ 待同步: ${pending}`;
+      dom.syncBadge.title = '尚有本機紀錄待同步至 Google 試算表';
+      dom.syncBadge.className = 'text-[11px] sm:text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap cursor-pointer';
     } else {
-      dom.syncBadge.textContent = '已同步';
-      dom.syncBadge.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700';
+      dom.syncBadge.textContent = '☁️ 已綁定同步';
+      dom.syncBadge.title = '已綁定 Google 試算表且全數同步完成';
+      dom.syncBadge.className = 'text-[11px] sm:text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap';
     }
   }
 
@@ -2016,11 +2255,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 同步至雲端 Google Sheets
-        const syncRes = await window.GoogleSync.syncAdvancedRecordToGoogle(rec);
-        if (syncRes.success) {
-          showToast(`🎉 進階紀錄【${rec.record_id}】已儲存並同步至 Google 試算表！`, 'success');
+        if (!window.GoogleSync.getApiUrl()) {
+          updateSyncStatusBadge();
+          openUnboundCloudReminderModal(`進階紀錄【${rec.record_id}】已儲存於本機，但您尚未綁定 Google 試算表！`);
         } else {
-          showToast(`💾 進階紀錄【${rec.record_id}】已儲存於本機（可匯出 Word 或 JSON）！`, 'success');
+          const syncRes = await window.GoogleSync.syncAdvancedRecordToGoogle(rec);
+          if (syncRes.success) {
+            showToast(`🎉 進階紀錄【${rec.record_id}】已儲存並同步至 Google 試算表！`, 'success');
+          } else {
+            showToast(`💾 進階紀錄【${rec.record_id}】已儲存於本機（可匯出 Word 或 JSON）！`, 'success');
+          }
         }
 
         // 自動產生下一筆流水號
@@ -2107,8 +2351,77 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.caseSelect.addEventListener('change', (e) => {
       currentCaseId = e.target.value;
       window.CaseManager.setActiveCase(currentCaseId);
+      renderCaseOptions();
       loadExistingRecordForDate(currentCaseId, dom.dateInput.value);
     });
+
+    // 頂部快速備註按鈕與備註個資安全彈窗事件
+    if (dom.btnQuickCaseNote) {
+      dom.btnQuickCaseNote.addEventListener('click', () => openCaseNotePrivacyModal(currentCaseId, false));
+    }
+    if (dom.btnCloseCaseNoteModal) {
+      dom.btnCloseCaseNoteModal.addEventListener('click', closeCaseNotePrivacyModal);
+    }
+    if (dom.btnCancelCaseNoteModal) {
+      dom.btnCancelCaseNoteModal.addEventListener('click', closeCaseNotePrivacyModal);
+    }
+    if (dom.btnSaveCaseNoteModal) {
+      dom.btnSaveCaseNoteModal.addEventListener('click', handleSaveCaseNoteFromModal);
+    }
+    if (dom.caseNoteModalInput) {
+      dom.caseNoteModalInput.addEventListener('input', (e) => {
+        updatePiiRiskBoxInModal(e.target.value);
+      });
+      dom.caseNoteModalInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSaveCaseNoteFromModal();
+        }
+      });
+    }
+    if (dom.caseNotePrivacyModal) {
+      dom.caseNotePrivacyModal.addEventListener('click', (e) => {
+        if (e.target === dom.caseNotePrivacyModal) closeCaseNotePrivacyModal();
+      });
+    }
+
+    // 未綁定 Google 雲端試算表防遺失橫幅與彈窗事件
+    if (dom.btnBannerGoBindCloud) {
+      dom.btnBannerGoBindCloud.addEventListener('click', jumpToGoogleSettingsAndFocus);
+    }
+    if (dom.btnBannerDismissCloudAlert) {
+      dom.btnBannerDismissCloudAlert.addEventListener('click', () => {
+        sessionDismissedCloudBanner = true;
+        updateSyncStatusBadge();
+        showToast('💡 您隨時可點選右上角「⚠️ 未綁定雲端」或「⚙️ 雲端設定」綁定 Google 試算表', 'info');
+      });
+    }
+    if (dom.syncBadge) {
+      dom.syncBadge.addEventListener('click', () => {
+        if (!window.GoogleSync.getApiUrl()) {
+          jumpToGoogleSettingsAndFocus();
+        } else {
+          switchTab('view-history');
+        }
+      });
+    }
+    if (dom.btnCloseUnboundModal) {
+      dom.btnCloseUnboundModal.addEventListener('click', closeUnboundCloudReminderModal);
+    }
+    if (dom.btnUnboundKeepLocal) {
+      dom.btnUnboundKeepLocal.addEventListener('click', () => {
+        closeUnboundCloudReminderModal();
+        showToast('💾 已暫存於本機瀏覽器。提醒您：記得綁定 Google 試算表以免資料遺失！', 'warning');
+      });
+    }
+    if (dom.btnUnboundGoSettings) {
+      dom.btnUnboundGoSettings.addEventListener('click', jumpToGoogleSettingsAndFocus);
+    }
+    if (dom.unboundCloudReminderModal) {
+      dom.unboundCloudReminderModal.addEventListener('click', (e) => {
+        if (e.target === dom.unboundCloudReminderModal) closeUnboundCloudReminderModal();
+      });
+    }
 
     dom.btnNewCase.addEventListener('click', handleCreateNewCase);
     dom.btnManageCases.addEventListener('click', openCaseManagerModal);
@@ -2234,6 +2547,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 批次同步
     dom.btnSyncAll.addEventListener('click', async () => {
+      if (!window.GoogleSync.getApiUrl()) {
+        openUnboundCloudReminderModal('您尚未綁定 Google 試算表網址，請先完成綁定後即可同步全部歷史紀錄！');
+        return;
+      }
       dom.btnSyncAll.disabled = true;
       dom.btnSyncAll.textContent = '⏳ 同步處理中...';
       const res = await window.GoogleSync.syncAllPending();
@@ -2259,8 +2576,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 設定頁面 GAS URL
     dom.apiUrlInput.value = window.GoogleSync.getApiUrl();
     dom.btnSaveApiUrl.addEventListener('click', () => {
-      window.GoogleSync.setApiUrl(dom.apiUrlInput.value);
-      showToast('Google 試算表 Web App 網址已儲存！', 'success');
+      const val = dom.apiUrlInput.value.trim();
+      window.GoogleSync.setApiUrl(val);
+      sessionDismissedCloudBanner = false;
+      updateSyncStatusBadge();
+      if (val) {
+        showToast('🎉 Google 試算表 Web App 網址已成功綁定！觀察資料將自動同步防遺失。', 'success');
+      } else {
+        showToast('⚠️ 已解除 Google 試算表綁定，提醒您：資料目前僅存於本機瀏覽器。', 'warning');
+      }
     });
 
     dom.btnTestApi.addEventListener('click', async () => {
